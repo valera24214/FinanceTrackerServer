@@ -1,3 +1,8 @@
+using FinanceTrackerServer.Data;
+using FinanceTrackerServer.Interfaces;
+using FinanceTrackerServer.Services;
+using Microsoft.EntityFrameworkCore;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -6,6 +11,15 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// Database
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("Postgres")));
+
+// Services
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddMemoryCache();
+builder.Services.AddScoped<IGroupService, GroupService>();
 
 var app = builder.Build();
 
