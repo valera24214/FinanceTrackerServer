@@ -10,9 +10,9 @@ namespace FinanceTrackerServer.Models.Entities
         public string Email { get; set; }
         public string PasswordHash { get; set; }
 
-        // Навигационные свойства
+
         public int? GroupId { get; set; }
-        public Group Group { get; set; }
+        public Group? Group { get; set; }
         public ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
     }
 }
