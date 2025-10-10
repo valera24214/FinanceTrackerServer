@@ -1,12 +1,16 @@
 ﻿using FinanceTrackerServer.Data;
 using FinanceTrackerServer.Interfaces;
+using FinanceTrackerServer.Models.DTO.Pagination;
+using FinanceTrackerServer.Models.DTO.Pagination.Requests;
+using FinanceTrackerServer.Models.DTO.Stats;
 using FinanceTrackerServer.Models.DTO.Transactions;
 using FinanceTrackerServer.Models.Entities;
 using Microsoft.EntityFrameworkCore;
+using static FinanceTrackerServer.Models.DTO.Stats.StatsPeriodRequest;
 
 namespace FinanceTrackerServer.Services
 {
-    public class TransactionService:ITransactionService
+    public class TransactionService : ITransactionService
     {
         private readonly AppDbContext _context;
 
@@ -35,16 +39,16 @@ namespace FinanceTrackerServer.Services
 
         public async Task<Transaction> Update(UpdateTransactionDto dto, int userId)
         {
-            var transaction = await _context.Transactions.FirstOrDefaultAsync(t=>t.Id == dto.Id);
+            var transaction = await _context.Transactions.FirstOrDefaultAsync(t => t.Id == dto.Id);
             if (transaction == null)
-                throw new ArgumentNullException("Transaction doesn't found");
+                throw new ArgumentException($"Transaction with id {dto.Id} not found");
 
             if (transaction.UserId != userId)
-                throw new ArgumentOutOfRangeException("Invalid user");
+                throw new UnauthorizedAccessException("You are not the owner of this transaction");
 
             transaction.Amount = dto.Amount;
             transaction.Description = dto.Description;
-            _context.Transactions.Update(transaction);
+
             await _context.SaveChangesAsync();
 
             return transaction;
@@ -52,15 +56,15 @@ namespace FinanceTrackerServer.Services
 
         public async Task Delete(int id, int userId)
         {
-            var transaction = await _context.Transactions.FirstOrDefaultAsync(t=>t.Id == id);
+            var transaction = await _context.Transactions.FirstOrDefaultAsync(t => t.Id == id);
             if (transaction == null)
-                throw new ArgumentNullException("Transaction doesn't found");
+                throw new ArgumentException($"Transaction with id {id} not found");
 
             if (transaction.UserId != userId)
-                throw new UnauthorizedAccessException("Invalid user");
+                throw new UnauthorizedAccessException("You are not the owner of this transaction");
 
             _context.Transactions.Remove(transaction);
-            await _context.SaveChangesAsync();  
+            await _context.SaveChangesAsync();
         }
 
         public async Task<Transaction> Get(int id, int userId, int? userGroupId)
@@ -75,21 +79,180 @@ namespace FinanceTrackerServer.Services
             return transaction;
         }
 
-        public async Task<List<Transaction>> GetTransactionsByGroup(int groupId, int? userGroupId)
+        public async Task<PaginatedResponse<Transaction>> GetTransactionsByUser(int userId, TransactionFilterRequest filter)
         {
-            if (groupId != userGroupId)
-                throw new UnauthorizedAccessException("Invalid user");
+            var query = _context.Transactions.Where(t => t.UserId == userId);
+            query = ApplyFilters(query, filter);
+            var totalCount = await query.CountAsync();
 
-            var transaction = await _context.Transactions.Where(t => t.GroupId == groupId).ToListAsync();
+            var items = await query
+                .OrderByDescending(t => t.Date)
+                .Skip((filter.PageNumber - 1) * filter.PageSize)
+                .Take(filter.PageSize)
+                .ToListAsync();
 
-            return transaction;
+            return new PaginatedResponse<Transaction>
+            {
+                Items = items,
+                PageNumber = filter.PageNumber,
+                PageSize = filter.PageSize,
+                TotalCount = totalCount
+            };
         }
 
-        public async Task<List<Transaction>> GetTransactionsByUser(int userId)
+        public async Task<PaginatedResponse<Transaction>> GetTransactionsByGroup(int groupId, TransactionFilterRequest filter)
         {
-            var transactions = await _context.Transactions.Where(t=>t.UserId == userId).ToListAsync();
+            var query = _context.Transactions.Where(t => t.GroupId == groupId);
+            query = ApplyFilters(query, filter);
+            var totalCount = await query.CountAsync();
 
-            return transactions;
+            var items = await query
+                .OrderByDescending(t => t.Date)
+                .Skip((filter.PageNumber - 1) * filter.PageSize)
+                .Take(filter.PageSize)
+                .ToListAsync();
+
+            return new PaginatedResponse<Transaction>
+            {
+                Items = items,
+                PageNumber = filter.PageNumber,
+                PageSize = filter.PageSize,
+                TotalCount = totalCount
+            };
         }
+
+        public async Task<TransactionStats> GetUserStats(int userId, StatsPeriodRequest? period = null)
+        {
+            var (startDate, endDate) = CalculatePeriod(period);
+
+            var query = _context.Transactions.Where(t => t.UserId == userId);
+            query = ApplyPeriodFilter(query, startDate, endDate);
+
+            var stats = new TransactionStats
+            {
+                TotalIncome = await query.Where(t => t.Type == TransactionType.Income).SumAsync(t => t.Amount),
+                TotalExpenses = await query.Where(t => t.Type == TransactionType.Expense).SumAsync(t => t.Amount),
+                TransactionCount = await query.CountAsync(),
+                LastTransactionDate = await query.MaxAsync(t => (DateTime?)t.Date),
+                PeriodStart = startDate,
+                PeriodEnd = endDate
+            };
+
+            return stats;
+        }
+
+        public async Task<GroupStatsResponse> GetGroupStats(int groupId, StatsPeriodRequest? period = null)
+        {
+            var (startDate, endDate) = CalculatePeriod(period);
+
+            var usersInGroup = await _context.Users.Where(u => u.GroupId == groupId).ToListAsync();
+            var response = new GroupStatsResponse();
+
+            var groupQuery = _context.Transactions.Where(t => t.GroupId == groupId);
+            groupQuery = ApplyPeriodFilter(groupQuery, startDate, endDate);
+
+            response.GroupTotal = new TransactionStats
+            {
+                TotalIncome = await groupQuery.Where(t => t.Type == TransactionType.Income).SumAsync(t => t.Amount),
+                TotalExpenses = await groupQuery.Where(t => t.Type == TransactionType.Expense).SumAsync(t => t.Amount),
+                TransactionCount = await groupQuery.CountAsync(),
+                LastTransactionDate = await groupQuery.MaxAsync(t => (DateTime?)t.Date),
+                PeriodStart = startDate,
+                PeriodEnd = endDate
+            };
+
+            foreach (var user in usersInGroup)
+            {
+                var userQuery = _context.Transactions.Where(t => t.UserId == user.Id);
+                userQuery = ApplyPeriodFilter(userQuery, startDate, endDate);
+
+                var userStats = new UserStats
+                {
+                    UserId = user.Id,
+                    UserName = user.Username,
+                    Stats = new TransactionStats
+                    {
+                        TotalIncome = await userQuery.Where(t => t.Type == TransactionType.Income).SumAsync(t => t.Amount),
+                        TotalExpenses = await userQuery.Where(t => t.Type == TransactionType.Expense).SumAsync(t => t.Amount),
+                        TransactionCount = await userQuery.CountAsync(),
+                        LastTransactionDate = await userQuery.MaxAsync(t => (DateTime?)t.Date),
+                        PeriodStart = startDate,
+                        PeriodEnd = endDate
+                    }
+                };
+
+                response.UsersStats.Add(userStats);
+            }
+
+            return response;
+        }
+
+        private (DateTime? startDate, DateTime? endDate) CalculatePeriod(StatsPeriodRequest? period)
+        {
+            if (period == null)
+                return (null, null);
+
+            if (period.StartDate.HasValue || period.EndDate.HasValue)
+                return (period.StartDate, period.EndDate);
+
+            var now = DateTime.UtcNow;
+            return period.Period switch
+            {
+                StatsPeriod.Last7Days => (now.AddDays(-7), now),
+                StatsPeriod.Last30Days => (now.AddDays(-30), now),
+                StatsPeriod.CurrentMonth => (new DateTime(now.Year, now.Month, 1), now),
+                StatsPeriod.LastMonth => (
+                    new DateTime(now.Year, now.Month, 1).AddMonths(-1),
+                    new DateTime(now.Year, now.Month, 1).AddDays(-1)
+                ),
+                StatsPeriod.CurrentYear => (new DateTime(now.Year, 1, 1), now),
+                _ => (null, null)
+            };
+        }
+
+        private IQueryable<Transaction> ApplyFilters(IQueryable<Transaction> query, TransactionFilterRequest filter)
+        {
+            if (filter.Type.HasValue)
+                query = query.Where(t => t.Type == filter.Type.Value);
+
+            if (filter.StartDate.HasValue)
+                query = query.Where(t => t.Date >= filter.StartDate.Value);
+
+            if (filter.EndDate.HasValue)
+                query = query.Where(t => t.Date <= filter.EndDate.Value);
+
+            if (filter.MinAmount.HasValue)
+                query = query.Where(t => t.Amount >= filter.MinAmount.Value);
+
+            if (filter.MaxAmount.HasValue)
+                query = query.Where(t => t.Amount <= filter.MaxAmount.Value);
+
+            if (!string.IsNullOrWhiteSpace(filter.Description))
+                query = query.Where(t => t.Description.Contains(filter.Description));
+
+            return query;
+        }
+
+        private IQueryable<Transaction> ApplyPeriodFilter(IQueryable<Transaction> query, DateTime? startDate, DateTime? endDate)
+        {
+            if (startDate.HasValue)
+                query = query.Where(t => t.Date >= startDate.Value);
+
+            if (endDate.HasValue)
+                query = query.Where(t => t.Date <= endDate.Value);
+
+            return query;
+        }
+    }
+
+    public class TransactionStats
+    {
+        public decimal TotalIncome { get; set; }
+        public decimal TotalExpenses { get; set; }
+        public decimal Balance => TotalIncome - TotalExpenses;
+        public int TransactionCount { get; set; }
+        public DateTime? LastTransactionDate { get; set; }
+        public DateTime? PeriodStart { get; set; }
+        public DateTime? PeriodEnd { get; set; }
     }
 }

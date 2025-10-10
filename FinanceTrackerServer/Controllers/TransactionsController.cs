@@ -1,5 +1,7 @@
 ﻿using FinanceTrackerServer.Data;
 using FinanceTrackerServer.Interfaces;
+using FinanceTrackerServer.Models.DTO.Pagination.Requests;
+using FinanceTrackerServer.Models.DTO.Stats;
 using FinanceTrackerServer.Models.DTO.Transactions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -21,26 +23,17 @@ namespace FinanceTrackerServer.Controllers
             _context = context;
         }
 
-        [HttpGet("{id:int}")]
-        public async Task<IActionResult> Get(int id)
+        [HttpGet("user")]
+        public async Task<IActionResult> GetUserTransactions([FromQuery] TransactionFilterRequest filter)
         {
-            try
-            {
-                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
-                var user = await _context.Users.FindAsync(userId);
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
+            var transactions = await _transactionService.GetTransactionsByUser(userId, filter);
 
-                var transaction = await _transactionService.Get(id, userId, user?.GroupId);
-                return Ok(transaction);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
-
+            return Ok(transactions);
         }
 
         [HttpGet("group/{groupId:int}")]
-        public async Task<IActionResult> GetGroupTransactions(int groupId)
+        public async Task<IActionResult> GetGroupTransactions(int groupId, [FromQuery] TransactionFilterRequest filter)
         {
             try
             {
@@ -50,7 +43,7 @@ namespace FinanceTrackerServer.Controllers
                 if (user.GroupId != groupId)
                     return Forbid();
 
-                var transactions = await _transactionService.GetTransactionsByGroup(groupId, user.GroupId);
+                var transactions = await _transactionService.GetTransactionsByGroup(groupId, filter);
 
                 return Ok(transactions);
             }
@@ -58,15 +51,6 @@ namespace FinanceTrackerServer.Controllers
             {
                 return BadRequest(ex.Message);
             }
-        }
-
-        [HttpGet]
-        public async Task<IActionResult> GetUserTransactions()
-        {
-            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
-            var transactions = await _transactionService.GetTransactionsByUser(userId);
-
-            return Ok(transactions);
         }
 
         [HttpPost]
@@ -84,6 +68,24 @@ namespace FinanceTrackerServer.Controllers
             {
                 return BadRequest(ex.Message);
             }
+        }
+
+        [HttpPost("{id:int}")]
+        public async Task<IActionResult> Get(int id)
+        {
+            try
+            {
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
+                var user = await _context.Users.FindAsync(userId);
+
+                var transaction = await _transactionService.Get(id, userId, user?.GroupId);
+                return Ok(transaction);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+
         }
 
         [HttpPut]
@@ -116,6 +118,33 @@ namespace FinanceTrackerServer.Controllers
             {
                 return BadRequest(ex.Message);
             }
+        }
+
+        [HttpGet("stats/user")]
+        public async Task<IActionResult> GetUserStats([FromQuery]StatsPeriodRequest? period) 
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
+            var user = await _context.Users.FindAsync(userId);
+
+            var stats = await _transactionService.GetUserStats(userId, period);
+
+            return Ok(stats);
+        }
+
+        [HttpGet("stats/group")]
+        public async Task<IActionResult> GetGroupStats([FromQuery] StatsPeriodRequest? period)
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
+            var user = await _context.Users.FindAsync(userId);
+
+            if(user.GroupId == null)
+            {
+                return BadRequest("This user doesn't have group");
+            }
+
+            var stats = await _transactionService.GetGroupStats((int)user.GroupId, period);
+           
+            return Ok(stats);
         }
     }
 }
