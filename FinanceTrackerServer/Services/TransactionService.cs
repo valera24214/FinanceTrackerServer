@@ -7,6 +7,7 @@ using FinanceTrackerServer.Models.DTO.Transactions;
 using FinanceTrackerServer.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 using static FinanceTrackerServer.Models.DTO.Stats.StatsPeriodRequest;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace FinanceTrackerServer.Services
 {
@@ -128,6 +129,9 @@ namespace FinanceTrackerServer.Services
             var query = _context.Transactions.Where(t => t.UserId == userId);
             query = ApplyPeriodFilter(query, startDate, endDate);
 
+            var totalIncome = await query.Where(t => t.Type == TransactionType.Income).SumAsync(t => t.Amount);
+            var totalExpenses = await query.Where(t=>t.Type == TransactionType.Expense).SumAsync(t => t.Amount);
+
             var stats = new TransactionStats
             {
                 TotalIncome = await query.Where(t => t.Type == TransactionType.Income).SumAsync(t => t.Amount),
@@ -135,7 +139,8 @@ namespace FinanceTrackerServer.Services
                 TransactionCount = await query.CountAsync(),
                 LastTransactionDate = await query.MaxAsync(t => (DateTime?)t.Date),
                 PeriodStart = startDate,
-                PeriodEnd = endDate
+                PeriodEnd = endDate,
+                CategoryStats = await GetCategoryStats(query, totalIncome, totalExpenses)
             };
 
             return stats;
@@ -151,6 +156,9 @@ namespace FinanceTrackerServer.Services
             var groupQuery = _context.Transactions.Where(t => t.GroupId == groupId);
             groupQuery = ApplyPeriodFilter(groupQuery, startDate, endDate);
 
+            var groupTotalIncome = await groupQuery.Where(t => t.Type == TransactionType.Income).SumAsync(t => t.Amount);
+            var groupTotalExpenses = await groupQuery.Where(t => t.Type == TransactionType.Expense).SumAsync(t => t.Amount);
+
             response.GroupTotal = new TransactionStats
             {
                 TotalIncome = await groupQuery.Where(t => t.Type == TransactionType.Income).SumAsync(t => t.Amount),
@@ -158,13 +166,17 @@ namespace FinanceTrackerServer.Services
                 TransactionCount = await groupQuery.CountAsync(),
                 LastTransactionDate = await groupQuery.MaxAsync(t => (DateTime?)t.Date),
                 PeriodStart = startDate,
-                PeriodEnd = endDate
+                PeriodEnd = endDate,
+                CategoryStats = await GetCategoryStats(groupQuery, groupTotalIncome, groupTotalExpenses)
             };
 
             foreach (var user in usersInGroup)
             {
                 var userQuery = _context.Transactions.Where(t => t.UserId == user.Id);
                 userQuery = ApplyPeriodFilter(userQuery, startDate, endDate);
+
+                var userTotalIncome = await userQuery.Where(t => t.Type == TransactionType.Income).SumAsync(t => t.Amount);
+                var userTotalExpenses = await userQuery.Where(t => t.Type == TransactionType.Expense).SumAsync(t => t.Amount);
 
                 var userStats = new UserStats
                 {
@@ -177,7 +189,8 @@ namespace FinanceTrackerServer.Services
                         TransactionCount = await userQuery.CountAsync(),
                         LastTransactionDate = await userQuery.MaxAsync(t => (DateTime?)t.Date),
                         PeriodStart = startDate,
-                        PeriodEnd = endDate
+                        PeriodEnd = endDate,
+                        CategoryStats = await GetCategoryStats(userQuery, userTotalIncome, userTotalExpenses)
                     }
                 };
 
@@ -233,6 +246,30 @@ namespace FinanceTrackerServer.Services
             return query;
         }
 
+        private async Task<List<CategoryStats>> GetCategoryStats(IQueryable<Transaction> query, decimal totalIncome, decimal totalExpenses)
+        {
+            var categoryStats = await query
+                .Where(t => t.CategoryId != null)
+                .GroupBy(t => new { t.Category!.Id, t.Category.Name, t.Category.Type })
+                .Select(g => new CategoryStats
+                {
+                    CategoryId = g.Key.Id,
+                    CategoryName = g.Key.Name,
+                    Type = g.Key.Type,
+                    TotalAmount = g.Sum(t=>t.Amount),
+                    TransactionCount = g.Count()
+                })
+                .ToListAsync();
+
+            foreach (var stat in categoryStats)
+            {
+                var totalForType = stat.Type == CategoryType.Income ? totalIncome : totalExpenses;
+                stat.Percentage = totalForType > 0 ? (stat.TotalAmount / totalForType) * 100 : 0;
+            }
+
+            return categoryStats;
+        }
+
         private IQueryable<Transaction> ApplyPeriodFilter(IQueryable<Transaction> query, DateTime? startDate, DateTime? endDate)
         {
             if (startDate.HasValue)
@@ -254,5 +291,8 @@ namespace FinanceTrackerServer.Services
         public DateTime? LastTransactionDate { get; set; }
         public DateTime? PeriodStart { get; set; }
         public DateTime? PeriodEnd { get; set; }
+
+
+        public List<CategoryStats> CategoryStats { get; set; } = new();
     }
 }
