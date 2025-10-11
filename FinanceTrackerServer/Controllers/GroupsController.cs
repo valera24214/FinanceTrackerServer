@@ -1,6 +1,7 @@
 ﻿using FinanceTrackerServer.Data;
 using FinanceTrackerServer.Interfaces;
 using FinanceTrackerServer.Models.DTO;
+using FinanceTrackerServer.Models.DTO.Users;
 using FinanceTrackerServer.Models.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -34,12 +35,20 @@ namespace FinanceTrackerServer.Controllers
                     return BadRequest("User not found");
 
                 var group = new Group { Name = name };
-                await _groupService.Create(group);
+                var groupDto = await _groupService.Create(group);
 
                 user.GroupId = group.Id;
                 await _context.SaveChangesAsync();
 
-                return Ok(group);
+                groupDto.Users = new List<UserDto>{ 
+                    new UserDto{ 
+                        Id = user.Id, 
+                        Name = user.Username, 
+                        Email = user.Email 
+                    } 
+                };
+
+                return Ok(groupDto);
             }
             catch (Exception ex)
             {
