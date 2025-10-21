@@ -63,7 +63,6 @@ namespace FinanceTrackerServer.Services
                 var groupId = int.Parse(parts[0]);
                 var timestamp = DateTime.ParseExact(parts[1], "yyyyMMddHHmm", null);
 
-                // Проверяем время и что код еще не использован
                 if (DateTime.UtcNow - timestamp > TimeSpan.FromMinutes(5) ||
                     !_cache.TryGetValue(decoded, out _))
                 {
