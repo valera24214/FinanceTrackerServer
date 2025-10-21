@@ -1,6 +1,6 @@
 ﻿using FinanceTrackerServer.Data;
-using FinanceTrackerServer.Interfaces;
 using FinanceTrackerServer.Models.Entities;
+using FinanceTrackerServer.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;

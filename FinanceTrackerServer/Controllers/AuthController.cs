@@ -1,6 +1,6 @@
-﻿using FinanceTrackerServer.Interfaces;
-using FinanceTrackerServer.Models.DTO.Users;
+﻿using FinanceTrackerServer.Models.DTO.Users;
 using FinanceTrackerServer.Models.Entities;
+using FinanceTrackerServer.Services.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 

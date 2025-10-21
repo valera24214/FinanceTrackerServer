@@ -6,7 +6,7 @@ using FinanceTrackerServer.Models.Entities;
 using FinanceTrackerServer.Services;
 using Microsoft.AspNetCore.Http.HttpResults;
 
-namespace FinanceTrackerServer.Interfaces
+namespace FinanceTrackerServer.Services.Interfaces
 {
     public interface ITransactionService
     {

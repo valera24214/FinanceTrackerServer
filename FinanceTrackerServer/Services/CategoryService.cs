@@ -1,6 +1,6 @@
 ﻿using FinanceTrackerServer.Data;
-using FinanceTrackerServer.Interfaces;
 using FinanceTrackerServer.Models.DTO;
+using FinanceTrackerServer.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace FinanceTrackerServer.Services

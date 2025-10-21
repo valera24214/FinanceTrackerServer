@@ -1,10 +1,10 @@
 ﻿using FinanceTrackerServer.Data;
-using FinanceTrackerServer.Interfaces;
 using FinanceTrackerServer.Models.DTO.Pagination;
 using FinanceTrackerServer.Models.DTO.Pagination.Requests;
 using FinanceTrackerServer.Models.DTO.Stats;
 using FinanceTrackerServer.Models.DTO.Transactions;
 using FinanceTrackerServer.Models.Entities;
+using FinanceTrackerServer.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using static FinanceTrackerServer.Models.DTO.Stats.StatsPeriodRequest;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory;

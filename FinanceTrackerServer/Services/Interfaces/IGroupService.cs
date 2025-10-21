@@ -1,7 +1,7 @@
 ﻿using FinanceTrackerServer.Models.DTO;
 using FinanceTrackerServer.Models.Entities;
 
-namespace FinanceTrackerServer.Interfaces
+namespace FinanceTrackerServer.Services.Interfaces
 {
     public interface IGroupService
     {

@@ -1,6 +1,6 @@
 ﻿using FinanceTrackerServer.Models.DTO;
 
-namespace FinanceTrackerServer.Interfaces
+namespace FinanceTrackerServer.Services.Interfaces
 {
     public interface ICategoryService
     {
