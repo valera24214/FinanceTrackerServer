@@ -30,7 +30,7 @@ namespace FinanceTrackerServer.Data
                .HasOne(t => t.Group)
                .WithMany(g => g.Transactions)
                .HasForeignKey(t => t.GroupId)
-               .OnDelete(DeleteBehavior.Cascade);
+               .OnDelete(DeleteBehavior.SetNull);
 
             modelBuilder.Entity<Category>(entity =>
             {

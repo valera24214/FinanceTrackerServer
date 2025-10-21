@@ -20,7 +20,7 @@ namespace FinanceTrackerServer.Services
             _context = context;
         }
 
-        public async Task<Transaction> Create(CreateTransactionDto dto, int userId, int? userGroupId)
+        public async Task<TransactionDto> Create(CreateTransactionDto dto, int userId, int? userGroupId)
         {
             var transaction = new Transaction
             {
@@ -30,15 +30,17 @@ namespace FinanceTrackerServer.Services
                 Type = dto.Type,
                 UserId = userId,
                 GroupId = userGroupId,
+                CategoryId = dto.CategoryId
             };
 
             await _context.Transactions.AddAsync(transaction);
             await _context.SaveChangesAsync();
 
-            return transaction;
+            var transactionDto = ConvertToDto(transaction);
+            return transactionDto;
         }
 
-        public async Task<Transaction> Update(UpdateTransactionDto dto, int userId)
+        public async Task<TransactionDto> Update(UpdateTransactionDto dto, int userId)
         {
             var transaction = await _context.Transactions.FirstOrDefaultAsync(t => t.Id == dto.Id);
             if (transaction == null)
@@ -52,7 +54,8 @@ namespace FinanceTrackerServer.Services
 
             await _context.SaveChangesAsync();
 
-            return transaction;
+            var transactionDto = ConvertToDto(transaction);
+            return transactionDto;
         }
 
         public async Task Delete(int id, int userId)
@@ -68,7 +71,7 @@ namespace FinanceTrackerServer.Services
             await _context.SaveChangesAsync();
         }
 
-        public async Task<Transaction> Get(int id, int userId, int? userGroupId)
+        public async Task<TransactionDto> Get(int id, int userId, int? userGroupId)
         {
             var transaction = await _context.Transactions.FirstOrDefaultAsync(t => t.Id == id);
             if (transaction == null)
@@ -77,10 +80,11 @@ namespace FinanceTrackerServer.Services
             if (transaction.UserId != userId && transaction.GroupId != userGroupId)
                 throw new UnauthorizedAccessException("Access to transaction denied");
 
-            return transaction;
+            var transactionDto = ConvertToDto(transaction);
+            return transactionDto;
         }
 
-        public async Task<PaginatedResponse<Transaction>> GetTransactionsByUser(int userId, TransactionFilterRequest filter)
+        public async Task<PaginatedResponse<TransactionDto>> GetTransactionsByUser(int userId, TransactionFilterRequest filter)
         {
             var query = _context.Transactions.Where(t => t.UserId == userId);
             query = ApplyFilters(query, filter);
@@ -92,16 +96,22 @@ namespace FinanceTrackerServer.Services
                 .Take(filter.PageSize)
                 .ToListAsync();
 
-            return new PaginatedResponse<Transaction>
+            var itemsDto = new List<TransactionDto>();
+            foreach (var item in items) 
             {
-                Items = items,
+                itemsDto.Add(ConvertToDto(item));
+            }
+
+            return new PaginatedResponse<TransactionDto>
+            {
+                Items = itemsDto,
                 PageNumber = filter.PageNumber,
                 PageSize = filter.PageSize,
                 TotalCount = totalCount
             };
         }
 
-        public async Task<PaginatedResponse<Transaction>> GetTransactionsByGroup(int groupId, TransactionFilterRequest filter)
+        public async Task<PaginatedResponse<TransactionDto>> GetTransactionsByGroup(int groupId, TransactionFilterRequest filter)
         {
             var query = _context.Transactions.Where(t => t.GroupId == groupId);
             query = ApplyFilters(query, filter);
@@ -113,9 +123,15 @@ namespace FinanceTrackerServer.Services
                 .Take(filter.PageSize)
                 .ToListAsync();
 
-            return new PaginatedResponse<Transaction>
+            var itemsDto = new List<TransactionDto>();
+            foreach (var item in items)
             {
-                Items = items,
+                itemsDto.Add(ConvertToDto(item));
+            }
+
+            return new PaginatedResponse<TransactionDto>
+            {
+                Items = itemsDto,
                 PageNumber = filter.PageNumber,
                 PageSize = filter.PageSize,
                 TotalCount = totalCount
@@ -200,6 +216,23 @@ namespace FinanceTrackerServer.Services
             return response;
         }
 
+        private TransactionDto ConvertToDto(Transaction transaction)
+        {
+            var transactionDto = new TransactionDto
+            {
+                Id = transaction.Id,
+                Amount = transaction.Amount,
+                Description = transaction.Description,
+                Date = transaction.Date,
+                Type = transaction.Type,
+                UserId = transaction.UserId,
+                GroupId = transaction.GroupId,
+                CategoryId = transaction.CategoryId
+            };
+
+            return transactionDto;
+        }
+
         private (DateTime? startDate, DateTime? endDate) CalculatePeriod(StatsPeriodRequest? period)
         {
             if (period == null)
@@ -246,6 +279,17 @@ namespace FinanceTrackerServer.Services
             return query;
         }
 
+        private IQueryable<Transaction> ApplyPeriodFilter(IQueryable<Transaction> query, DateTime? startDate, DateTime? endDate)
+        {
+            if (startDate.HasValue)
+                query = query.Where(t => t.Date >= startDate.Value);
+
+            if (endDate.HasValue)
+                query = query.Where(t => t.Date <= endDate.Value);
+
+            return query;
+        }
+
         private async Task<List<CategoryStats>> GetCategoryStats(IQueryable<Transaction> query, decimal totalIncome, decimal totalExpenses)
         {
             var categoryStats = await query
@@ -268,17 +312,6 @@ namespace FinanceTrackerServer.Services
             }
 
             return categoryStats;
-        }
-
-        private IQueryable<Transaction> ApplyPeriodFilter(IQueryable<Transaction> query, DateTime? startDate, DateTime? endDate)
-        {
-            if (startDate.HasValue)
-                query = query.Where(t => t.Date >= startDate.Value);
-
-            if (endDate.HasValue)
-                query = query.Where(t => t.Date <= endDate.Value);
-
-            return query;
         }
     }
 

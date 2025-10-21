@@ -19,9 +19,9 @@ namespace FinanceTrackerServer.Services
             _config = configuration;
         }
 
-        public async Task<bool> UserExist(string username)
+        public async Task<bool> UserExist(string Email)
         {
-            return await _context.Users.AnyAsync(x => x.Username == username);
+            return await _context.Users.AnyAsync(x => x.Email == Email);
         }
 
         public string GenerateToken(User user)
@@ -36,7 +36,7 @@ namespace FinanceTrackerServer.Services
 
             var token = new JwtSecurityToken(
                 issuer: _config["Jwt:Issuer"],
-                audience: _config["Jwt:Issuer"],
+                audience: _config["Jwt:Audience"],
                 claims: cliams,
                 expires: DateTime.UtcNow.AddMinutes(15),
                 signingCredentials: creds
@@ -57,12 +57,12 @@ namespace FinanceTrackerServer.Services
             return user;
         }
 
-        public async Task<string> Login(string username, string password)
+        public async Task<string> Login(string email, string password)
         {
-            if (!await UserExist(username))
+            if (!await UserExist(email))
                 throw new ArgumentException("This user doesn't exist");
 
-            var user = await _context.Users.FirstOrDefaultAsync(x => x.Username == username);
+            var user = await _context.Users.FirstOrDefaultAsync(x => x.Email == email);
             if (!BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
                 throw new ArgumentException("Invalid password");
 

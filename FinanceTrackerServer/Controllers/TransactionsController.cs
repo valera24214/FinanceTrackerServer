@@ -32,18 +32,18 @@ namespace FinanceTrackerServer.Controllers
             return Ok(transactions);
         }
 
-        [HttpGet("group/{groupId:int}")]
-        public async Task<IActionResult> GetGroupTransactions(int groupId, [FromQuery] TransactionFilterRequest filter)
+        [HttpGet("group")]
+        public async Task<IActionResult> GetGroupTransactions([FromQuery] TransactionFilterRequest filter)
         {
             try
             {
                 var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
                 var user = await _context.Users.FindAsync(userId);
 
-                if (user.GroupId != groupId)
-                    return Forbid();
+                if (!user.GroupId.HasValue)
+                    throw new NullReferenceException("This user is not in the group");
 
-                var transactions = await _transactionService.GetTransactionsByGroup(groupId, filter);
+                var transactions = await _transactionService.GetTransactionsByGroup((int)user.GroupId, filter);
 
                 return Ok(transactions);
             }
@@ -53,7 +53,7 @@ namespace FinanceTrackerServer.Controllers
             }
         }
 
-        [HttpPost]
+        [HttpPost("create")]
         public async Task<IActionResult> Create([FromBody] CreateTransactionDto dto)
         {
             try
@@ -70,7 +70,7 @@ namespace FinanceTrackerServer.Controllers
             }
         }
 
-        [HttpPost("{id:int}")]
+        [HttpGet("{id:int}")]
         public async Task<IActionResult> Get(int id)
         {
             try

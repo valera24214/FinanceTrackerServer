@@ -10,13 +10,13 @@ namespace FinanceTrackerServer.Interfaces
 {
     public interface ITransactionService
     {
-        Task<Transaction> Create(CreateTransactionDto dto, int userId, int? userGroupId);
-        Task<Transaction> Update(UpdateTransactionDto dto, int userId);
+        Task<TransactionDto> Create(CreateTransactionDto dto, int userId, int? userGroupId);
+        Task<TransactionDto> Update(UpdateTransactionDto dto, int userId);
         Task Delete(int id, int userId);
 
-        Task<Transaction> Get(int id, int userId, int? userGroupId);
-        Task<PaginatedResponse<Transaction>> GetTransactionsByUser(int userId, TransactionFilterRequest filter);
-        Task<PaginatedResponse<Transaction>> GetTransactionsByGroup(int groupId, TransactionFilterRequest filter);
+        Task<TransactionDto> Get(int id, int userId, int? userGroupId);
+        Task<PaginatedResponse<TransactionDto>> GetTransactionsByUser(int userId, TransactionFilterRequest filter);
+        Task<PaginatedResponse<TransactionDto>> GetTransactionsByGroup(int groupId, TransactionFilterRequest filter);
 
         Task<TransactionStats> GetUserStats(int userId, StatsPeriodRequest? period = null);
         Task<GroupStatsResponse> GetGroupStats(int groupId, StatsPeriodRequest? period = null);

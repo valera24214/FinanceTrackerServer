@@ -1,5 +1,6 @@
 ﻿using FinanceTrackerServer.Data;
 using FinanceTrackerServer.Interfaces;
+using FinanceTrackerServer.Models.DTO;
 using FinanceTrackerServer.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -18,11 +19,16 @@ namespace FinanceTrackerServer.Services
             _context = context;
         }
 
-        public async Task<Group> Create(Group group)
+        public async Task<GroupDto> Create(Group group)
         {
             await _context.Groups.AddAsync(group);
             await _context.SaveChangesAsync();
-            return group;
+
+            return new GroupDto 
+            {
+                Id = group.Id,
+                Name = group.Name,
+            };
         }
 
         public async Task Delete(int id)
@@ -57,7 +63,6 @@ namespace FinanceTrackerServer.Services
                 var groupId = int.Parse(parts[0]);
                 var timestamp = DateTime.ParseExact(parts[1], "yyyyMMddHHmm", null);
 
-                // Проверяем время и что код еще не использован
                 if (DateTime.UtcNow - timestamp > TimeSpan.FromMinutes(5) ||
                     !_cache.TryGetValue(decoded, out _))
                 {
