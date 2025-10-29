@@ -1,5 +1,6 @@
 ﻿using FinanceTrackerServer.Models.DTO.Users;
 using FinanceTrackerServer.Models.Entities;
+using FinanceTrackerServer.Services;
 using FinanceTrackerServer.Services.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -11,10 +12,14 @@ namespace FinanceTrackerServer.Controllers
     public class AuthController : ControllerBase
     {
         private readonly IAuthService _authService;
+        private readonly ITelegramAuthService _telegramAuthService;
+        private readonly UserDtoMapper _userDtoMapper;
 
-        public AuthController(IAuthService authService)
+        public AuthController(IAuthService authService, ITelegramAuthService telegramAuthService, UserDtoMapper dtoMapper)
         {
             _authService = authService;
+            _telegramAuthService = telegramAuthService;
+            _userDtoMapper = dtoMapper;
         }
 
         [HttpPost("register")]
@@ -54,6 +59,49 @@ namespace FinanceTrackerServer.Controllers
                 return Ok(new { token = token });
             }
             catch (Exception ex) 
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpPost("register/telegram")]
+        public async Task<IActionResult> RegisterByTelegram(TelegramDto telegramDto)
+        {
+            try 
+            {
+                if(!_telegramAuthService.ValidateTelegramAuth(telegramDto))
+                {
+                    return Unauthorized("Invalid Telegram authentication data");
+                }
+
+                var registeredUser = await _authService.RegisterByTelegram(telegramDto.Id, telegramDto.Username);
+                
+                return Ok(_userDtoMapper.MapToClientSpecificDto(registeredUser));
+
+            }
+            catch(Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpPost("login/telegram")]
+        public async Task<IActionResult> LoginByTelegram(TelegramDto telegramDto)
+        {
+            try
+            {
+                if (!_telegramAuthService.ValidateTelegramAuth(telegramDto))
+                {
+                    return Unauthorized("Invalid Telegram authentication data");
+                }
+
+                var token = await _authService.LoginByTelegram(telegramDto.Id);
+                if (token == null)
+                    return Unauthorized("Invalid credentials");
+
+                return Ok(new { token = token });
+            }
+            catch (Exception ex)
             {
                 return BadRequest(ex.Message);
             }

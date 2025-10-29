@@ -9,8 +9,5 @@ namespace FinanceTrackerServer.Services.Interfaces
 
         Task<User> RegisterByTelegram(long TelegramId, string username);
         Task<string> LoginByTelegram(long TelegramId);
-
-        Task BindTelegram(int userId, long telegramId, string telegramUsername);
-        Task BindEmail(int userId, string email, string password);
     }
 }
