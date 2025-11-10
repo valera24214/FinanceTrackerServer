@@ -26,12 +26,6 @@ namespace FinanceTrackerServer.Data
                 .HasForeignKey(t => t.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            modelBuilder.Entity<Transaction>()
-               .HasOne(t => t.Group)
-               .WithMany(g => g.Transactions)
-               .HasForeignKey(t => t.GroupId)
-               .OnDelete(DeleteBehavior.SetNull);
-
             modelBuilder.Entity<Category>(entity =>
             {
                 entity.HasKey(c => c.Id);

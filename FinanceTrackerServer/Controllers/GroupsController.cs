@@ -2,6 +2,7 @@
 using FinanceTrackerServer.Models.DTO;
 using FinanceTrackerServer.Models.DTO.Users;
 using FinanceTrackerServer.Models.Entities;
+using FinanceTrackerServer.Services;
 using FinanceTrackerServer.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,11 +17,13 @@ namespace FinanceTrackerServer.Controllers
     {
         private IGroupService _groupService;
         private AppDbContext _context;
+        private UserDtoMapper _dtoMapper;
 
-        public GroupsController(IGroupService groupService, AppDbContext context)
+        public GroupsController(IGroupService groupService, AppDbContext context, UserDtoMapper dtoMapper)
         {
             _groupService = groupService;
             _context = context;
+            _dtoMapper = dtoMapper;
         }
 
         [HttpPost("create")]
@@ -44,12 +47,8 @@ namespace FinanceTrackerServer.Controllers
                 user.GroupId = group.Id;
                 await _context.SaveChangesAsync();
 
-                groupDto.Users = new List<UserDto>{ 
-                    new UserDto{ 
-                        Id = user.Id, 
-                        Name = user.Username, 
-                        Email = user.Email 
-                    } 
+                groupDto.Users = new List<UserDto>{
+                    _dtoMapper.MapToClientSpecificDto(user)
                 };
 
                 return Ok(groupDto);

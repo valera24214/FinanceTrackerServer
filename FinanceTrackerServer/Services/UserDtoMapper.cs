@@ -16,7 +16,7 @@ namespace FinanceTrackerServer.Services
         public UserDtoMapper(IHttpContextAccessor contextAccessor)
         { _contextAccessor = contextAccessor; }
 
-        public object MapToClientSpecificDto(User user)
+        public UserDto MapToClientSpecificDto(User user)
         {
             var clientType = GetClientType();
 

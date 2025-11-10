@@ -75,11 +75,8 @@ namespace FinanceTrackerServer.Services
             return GenerateToken(user);
         }
 
-        public async Task<User> RegisterByTelegram(long telegramId, string username)
+        private async Task<User> RegisterByTelegram(long telegramId, string username)
         {
-            if (await UserExist(telegramId))
-                throw new ArgumentException("User already registered");
-
             var user = new User
             {
                 Username = username,
@@ -93,12 +90,17 @@ namespace FinanceTrackerServer.Services
             return user;
         }
 
-        public async Task<string> LoginByTelegram(long telegramId)
+        public async Task<string> LoginByTelegram(long telegramId, string username)
         {
+            var user = new User();
             if (!await UserExist(telegramId))
-                throw new ArgumentException("This user doesn't exist");
-
-            var user = _context.Users.FirstOrDefault(u => u.TelegramId == telegramId);
+            {
+                user = await RegisterByTelegram(telegramId, username);
+            }
+            else 
+            {
+                user = _context.Users.FirstOrDefault(u => u.TelegramId == telegramId);
+            }
 
             return GenerateToken(user);
         }

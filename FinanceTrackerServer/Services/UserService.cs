@@ -1,5 +1,6 @@
 ﻿using FinanceTrackerServer.Data;
 using FinanceTrackerServer.Models.Entities;
+using FinanceTrackerServer.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace FinanceTrackerServer.Services

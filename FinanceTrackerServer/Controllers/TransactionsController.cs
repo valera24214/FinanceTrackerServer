@@ -61,7 +61,7 @@ namespace FinanceTrackerServer.Controllers
                 var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
                 var user = await _context.Users.FindAsync(userId);
 
-                var transaction = await _transactionService.Create(dto, userId, user?.GroupId);
+                var transaction = await _transactionService.Create(dto, userId);
                 return Ok(transaction);
             }
             catch (Exception ex)
@@ -78,7 +78,7 @@ namespace FinanceTrackerServer.Controllers
                 var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
                 var user = await _context.Users.FindAsync(userId);
 
-                var transaction = await _transactionService.Get(id, userId, user?.GroupId);
+                var transaction = await _transactionService.Get(id, userId);
                 return Ok(transaction);
             }
             catch (Exception ex)

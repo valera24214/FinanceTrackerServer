@@ -20,7 +20,7 @@ namespace FinanceTrackerServer.Services
             _context = context;
         }
 
-        public async Task<TransactionDto> Create(CreateTransactionDto dto, int userId, int? userGroupId)
+        public async Task<TransactionDto> Create(CreateTransactionDto dto, int userId)
         {
             var transaction = new Transaction
             {
@@ -29,7 +29,6 @@ namespace FinanceTrackerServer.Services
                 Date = dto.Date,
                 Type = dto.Type,
                 UserId = userId,
-                GroupId = userGroupId,
                 CategoryId = dto.CategoryId
             };
 
@@ -71,13 +70,13 @@ namespace FinanceTrackerServer.Services
             await _context.SaveChangesAsync();
         }
 
-        public async Task<TransactionDto> Get(int id, int userId, int? userGroupId)
+        public async Task<TransactionDto> Get(int id, int userId)
         {
             var transaction = await _context.Transactions.FirstOrDefaultAsync(t => t.Id == id);
             if (transaction == null)
                 throw new ArgumentException($"Transaction with id {id} not found");
 
-            if (transaction.UserId != userId && transaction.GroupId != userGroupId)
+            if (transaction.UserId != userId)
                 throw new UnauthorizedAccessException("Access to transaction denied");
 
             var transactionDto = ConvertToDto(transaction);
@@ -113,7 +112,7 @@ namespace FinanceTrackerServer.Services
 
         public async Task<PaginatedResponse<TransactionDto>> GetTransactionsByGroup(int groupId, TransactionFilterRequest filter)
         {
-            var query = _context.Transactions.Where(t => t.GroupId == groupId);
+            var query = _context.Transactions.Where(t => t.User.GroupId == groupId);
             query = ApplyFilters(query, filter);
             var totalCount = await query.CountAsync();
 
@@ -169,7 +168,7 @@ namespace FinanceTrackerServer.Services
             var usersInGroup = await _context.Users.Where(u => u.GroupId == groupId).ToListAsync();
             var response = new GroupStatsResponse();
 
-            var groupQuery = _context.Transactions.Where(t => t.GroupId == groupId);
+            var groupQuery = _context.Transactions.Where(t => t.User.GroupId == groupId);
             groupQuery = ApplyPeriodFilter(groupQuery, startDate, endDate);
 
             var groupTotalIncome = await groupQuery.Where(t => t.Type == TransactionType.Income).SumAsync(t => t.Amount);
@@ -226,7 +225,6 @@ namespace FinanceTrackerServer.Services
                 Date = transaction.Date,
                 Type = transaction.Type,
                 UserId = transaction.UserId,
-                GroupId = transaction.GroupId,
                 CategoryId = transaction.CategoryId
             };
 

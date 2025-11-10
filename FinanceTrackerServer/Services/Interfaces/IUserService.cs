@@ -1,4 +1,4 @@
-﻿namespace FinanceTrackerServer.Services
+﻿namespace FinanceTrackerServer.Services.Interfaces
 {
     public interface IUserService
     {

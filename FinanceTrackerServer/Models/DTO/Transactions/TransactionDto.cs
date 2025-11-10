@@ -11,7 +11,6 @@ namespace FinanceTrackerServer.Models.DTO.Transactions
         public TransactionType Type { get; set; }
 
         public int UserId { get; set; }
-        public int? GroupId { get; set; }
-        public int CategoryId { get; set; }
+        public int? CategoryId { get; set; }
     }
 }
