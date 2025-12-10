@@ -1,12 +1,13 @@
-﻿using FinanceTrackerServer.Models.Entities;
+﻿using FinanceTrackerServer.Models.DTO.AuthAccounts;
+using FinanceTrackerServer.Models.Entities;
 
 namespace FinanceTrackerServer.Services.Interfaces
 {
     public interface IAuthService
     {
-        Task<User> Register(User user, string password);
-        Task<string> Login(string email, string password);
+        Task<AuthAccount> RegisterByPassword(PasswordAccountDto dto);
+        Task<string> LoginByPassword(PasswordAccountDto dto);
 
-        Task<string> LoginByTelegram(long TelegramId, string username);
+        Task<string> LoginByTelegram(TelegramAccountDto dto);
     }
 }

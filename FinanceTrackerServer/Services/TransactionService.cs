@@ -187,26 +187,10 @@ namespace FinanceTrackerServer.Services
 
             foreach (var user in usersInGroup)
             {
-                var userQuery = _context.Transactions.Where(t => t.UserId == user.Id);
-                userQuery = ApplyPeriodFilter(userQuery, startDate, endDate);
-
-                var userTotalIncome = await userQuery.Where(t => t.Type == TransactionType.Income).SumAsync(t => t.Amount);
-                var userTotalExpenses = await userQuery.Where(t => t.Type == TransactionType.Expense).SumAsync(t => t.Amount);
-
-                var userStats = new UserStats
+               var userStats = new UserStats
                 {
                     UserId = user.Id,
-                    UserName = user.Username,
-                    Stats = new TransactionStats
-                    {
-                        TotalIncome = await userQuery.Where(t => t.Type == TransactionType.Income).SumAsync(t => t.Amount),
-                        TotalExpenses = await userQuery.Where(t => t.Type == TransactionType.Expense).SumAsync(t => t.Amount),
-                        TransactionCount = await userQuery.CountAsync(),
-                        LastTransactionDate = await userQuery.MaxAsync(t => (DateTime?)t.Date),
-                        PeriodStart = startDate,
-                        PeriodEnd = endDate,
-                        CategoryStats = await GetCategoryStats(userQuery, userTotalIncome, userTotalExpenses)
-                    }
+                    Stats = await GetUserStats(user.Id, period)
                 };
 
                 response.UsersStats.Add(userStats);

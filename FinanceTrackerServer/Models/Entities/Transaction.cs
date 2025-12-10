@@ -2,8 +2,8 @@
 {
     public enum TransactionType
     {
-        Income,
-        Expense
+        Expense,
+        Income
     }
 
     public class Transaction
@@ -15,11 +15,9 @@
         public TransactionType Type { get; set; }
 
         public int UserId { get; set; }
-        /*public int? GroupId { get; set; }*/
-        public int? CategoryId { get; set; }
+        public int CategoryId { get; set; }
 
         public User User { get; set; }
-        /*public Group? Group { get; set; }*/
-        public Category? Category { get; set; }
+        public Category Category { get; set; }
     }
 }

@@ -9,8 +9,19 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Models\DTO\Users\**" />
+    <Content Remove="Models\DTO\Users\**" />
+    <EmbeddedResource Remove="Models\DTO\Users\**" />
+    <None Remove="Models\DTO\Users\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Controllers\UserController.cs" />
     <Compile Remove="Services\Interfaces\ITelegramAuthService.cs" />
+    <Compile Remove="Services\Interfaces\IUserService.cs" />
     <Compile Remove="Services\TelegramAuthServive.cs" />
+    <Compile Remove="Services\UserDtoMapper.cs" />
+    <Compile Remove="Services\UserService.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -27,6 +38,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.22.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="Npgsql" Version="9.0.3" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.6" />

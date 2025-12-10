@@ -11,6 +11,7 @@ namespace FinanceTrackerServer.Data
         public DbSet<Group> Groups { get; set; }
         public DbSet<Transaction> Transactions { get; set; }
         public DbSet<Category> Categories { get; set; }
+        public DbSet<AuthAccount> AuthAccounts { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -36,6 +37,22 @@ namespace FinanceTrackerServer.Data
                       .WithOne(t => t.Category)
                       .HasForeignKey(t => t.CategoryId)
                       .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<AuthAccount>(b =>
+            {
+                b.HasKey(a => a.Id);
+
+                b.Property(a => a.Provider).IsRequired();
+                b.Property(a => a.ProviderId).IsRequired().HasMaxLength(512);
+
+                b.HasOne(a => a.User)
+                 .WithMany(u => u.AuthAccounts)
+                 .HasForeignKey(a => a.UserId)
+                 .OnDelete(DeleteBehavior.Cascade);
+
+                b.HasIndex(a => new { a.Provider, a.ProviderId })
+                 .IsUnique();
             });
 
         }

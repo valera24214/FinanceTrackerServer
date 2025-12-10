@@ -70,16 +70,16 @@ namespace FinanceTrackerServer.Controllers
             }
         }
 
-        [HttpGet("{id:int}")]
-        public async Task<IActionResult> Get(int id)
+        [HttpGet]
+        public async Task<IActionResult> Get([FromQuery] TransactionFilterRequest filter)
         {
             try
             {
                 var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
                 var user = await _context.Users.FindAsync(userId);
 
-                var transaction = await _transactionService.Get(id, userId);
-                return Ok(transaction);
+                var transactions = await _transactionService.GetTransactionsByUser(userId, filter);
+                return Ok(transactions);
             }
             catch (Exception ex)
             {
@@ -121,10 +121,13 @@ namespace FinanceTrackerServer.Controllers
         }
 
         [HttpGet("stats/user")]
-        public async Task<IActionResult> GetUserStats([FromQuery]StatsPeriodRequest? period) 
+        public async Task<IActionResult> GetUserStats([FromQuery][Bind(Prefix ="")]StatsPeriodRequest? period) 
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
             var user = await _context.Users.FindAsync(userId);
+
+            Console.WriteLine($"Raw Period: {HttpContext.Request.Query["Period"]}");
+            Console.WriteLine($"Bound Period: {period?.Period}");
 
             var stats = await _transactionService.GetUserStats(userId, period);
 
@@ -132,7 +135,7 @@ namespace FinanceTrackerServer.Controllers
         }
 
         [HttpGet("stats/group")]
-        public async Task<IActionResult> GetGroupStats([FromQuery] StatsPeriodRequest? period)
+        public async Task<IActionResult> GetGroupStats([FromQuery][Bind(Prefix = "")] StatsPeriodRequest? period)
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
             var user = await _context.Users.FindAsync(userId);

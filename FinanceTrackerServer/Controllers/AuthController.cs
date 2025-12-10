@@ -1,8 +1,5 @@
-﻿using FinanceTrackerServer.Models.DTO.Users;
-using FinanceTrackerServer.Models.Entities;
-using FinanceTrackerServer.Services;
+﻿using FinanceTrackerServer.Models.DTO.AuthAccounts;
 using FinanceTrackerServer.Services.Interfaces;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FinanceTrackerServer.Controllers
@@ -12,62 +9,52 @@ namespace FinanceTrackerServer.Controllers
     public class AuthController : ControllerBase
     {
         private readonly IAuthService _authService;
-        private readonly UserDtoMapper _userDtoMapper;
 
-        public AuthController(IAuthService authService, UserDtoMapper dtoMapper)
+        public AuthController(IAuthService authService)
         {
             _authService = authService;
-            _userDtoMapper = dtoMapper;
         }
 
-        [HttpPost("register")]
-        public async Task<IActionResult> Register(UserRegisterDto registerDto)
+        [HttpPost("register/password")]
+        public async Task<IActionResult> RegisterByPassword(PasswordAccountDto dto)
         {
-            try 
+            try
             {
-                var user = new User
-                {
-                    Username = registerDto.Username,
-                    Email = registerDto.Email
-                };
-
-                var registeredUser = await _authService.Register(user, registerDto.Password);
+                await _authService.RegisterByPassword(dto);
                 return Ok(new
                 {
-                    id = registeredUser.Id,
-                    username = registeredUser.Username,
                     message = "Registration successful"
                 });
             }
-            catch(Exception ex) 
+            catch (Exception ex)
             {
                 return BadRequest(ex.Message);
             }
         }
 
-        [HttpPost("login")]
-        public async Task<IActionResult> Login(UserLoginDto loginDto)
+        [HttpPost("login/password")]
+        public async Task<IActionResult> Login(PasswordAccountDto dto)
         {
             try
             {
-                var token = await _authService.Login(loginDto.Email, loginDto.Password);
+                var token = await _authService.LoginByPassword(dto);
                 if (token == null)
                     return Unauthorized("Invalid credentials");
 
                 return Ok(new { token = token });
             }
-            catch (Exception ex) 
+            catch (Exception ex)
             {
                 return BadRequest(ex.Message);
             }
         }
 
         [HttpPost("login/telegram")]
-        public async Task<IActionResult> LoginByTelegram(TelegramDto telegramDto)
+        public async Task<IActionResult> LoginByTelegram(TelegramAccountDto dto)
         {
             try
             {
-                var token = await _authService.LoginByTelegram(telegramDto.Id, telegramDto.Username);
+                var token = await _authService.LoginByTelegram(dto);
                 if (token == null)
                     return Unauthorized("Invalid credentials");
 

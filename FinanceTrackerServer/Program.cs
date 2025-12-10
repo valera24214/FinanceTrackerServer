@@ -1,4 +1,5 @@
 using FinanceTrackerServer.Data;
+using FinanceTrackerServer.Models.Entities;
 using FinanceTrackerServer.Services;
 using FinanceTrackerServer.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -45,7 +46,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IGroupService, GroupService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
-builder.Services.AddScoped<UserDtoMapper>();
+builder.Services.AddScoped<IAuthAccountFactory, AuthAccountsFactory>();
 
 
 builder.Services.AddSwaggerGen(options =>

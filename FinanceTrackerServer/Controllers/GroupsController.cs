@@ -1,6 +1,5 @@
 ﻿using FinanceTrackerServer.Data;
 using FinanceTrackerServer.Models.DTO;
-using FinanceTrackerServer.Models.DTO.Users;
 using FinanceTrackerServer.Models.Entities;
 using FinanceTrackerServer.Services;
 using FinanceTrackerServer.Services.Interfaces;
@@ -17,17 +16,15 @@ namespace FinanceTrackerServer.Controllers
     {
         private IGroupService _groupService;
         private AppDbContext _context;
-        private UserDtoMapper _dtoMapper;
 
-        public GroupsController(IGroupService groupService, AppDbContext context, UserDtoMapper dtoMapper)
+        public GroupsController(IGroupService groupService, AppDbContext context)
         {
             _groupService = groupService;
             _context = context;
-            _dtoMapper = dtoMapper;
         }
 
         [HttpPost("create")]
-        public async Task<IActionResult> Create(string name)
+        public async Task<IActionResult> Create()
         {
             try
             {
@@ -37,21 +34,14 @@ namespace FinanceTrackerServer.Controllers
                 if (user == null)
                     return BadRequest("User not found");
 
-                if (user.GroupId!=null)
-                {
+                if (user.GroupId != null)
                     return BadRequest("User already in group");
-                }
-                var group = new Group { Name = name };
-                var groupDto = await _groupService.Create(group);
 
+                var group = await _groupService.Create();
                 user.GroupId = group.Id;
                 await _context.SaveChangesAsync();
 
-                groupDto.Users = new List<UserDto>{
-                    _dtoMapper.MapToClientSpecificDto(user)
-                };
-
-                return Ok(groupDto);
+                return Ok();
             }
             catch (Exception ex)
             {
@@ -79,17 +69,21 @@ namespace FinanceTrackerServer.Controllers
             }
         }
 
-        [HttpGet("invite-code")]
-        public IActionResult GetInviteCode()
+        [HttpGet("invite_code")]
+        public async Task<IActionResult> GetInviteCode()
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
             var user = _context.Users.Find(userId);
 
             if (!user.GroupId.HasValue)
-                throw new NullReferenceException("This user is not in the group");
+            {
+                var group = await _groupService.Create();
+                user.GroupId = group.Id;
+                await _context.SaveChangesAsync();
+            }
 
             var code = _groupService.GenerateInviteCode((int)user.GroupId);
-            return Ok(new { code, expiresIn = "5 minutes" });
+            return Ok(new { code, expiresIn = "60 minutes" });
         }
 
         [HttpPost("join")]

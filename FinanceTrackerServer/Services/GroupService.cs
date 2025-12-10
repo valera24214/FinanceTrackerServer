@@ -19,15 +19,15 @@ namespace FinanceTrackerServer.Services
             _context = context;
         }
 
-        public async Task<GroupDto> Create(Group group)
+        public async Task<GroupDto> Create()
         {
+            var group = new Group();
             await _context.Groups.AddAsync(group);
             await _context.SaveChangesAsync();
 
             return new GroupDto 
             {
                 Id = group.Id,
-                Name = group.Name,
             };
         }
 
@@ -43,11 +43,18 @@ namespace FinanceTrackerServer.Services
 
         public string GenerateInviteCode(int groupId)
         {
+            if (_cache.TryGetValue(groupId, out string existingCode))
+            {
+                return existingCode;
+            }
+
             var timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmm");
             var code = $"{groupId}_{timestamp}";
-            _cache.Set(code, true, TimeSpan.FromMinutes(5));
+            var encoded = Convert.ToBase64String(Encoding.UTF8.GetBytes(code));
 
-            return Convert.ToBase64String(Encoding.UTF8.GetBytes(code));
+            _cache.Set(encoded, groupId, TimeSpan.FromMinutes(60));
+
+            return encoded;
         }
 
         public (bool isValid, int groupId) ValidateInviteCode(string code)
@@ -63,8 +70,8 @@ namespace FinanceTrackerServer.Services
                 var groupId = int.Parse(parts[0]);
                 var timestamp = DateTime.ParseExact(parts[1], "yyyyMMddHHmm", null);
 
-                if (DateTime.UtcNow - timestamp > TimeSpan.FromMinutes(5) ||
-                    !_cache.TryGetValue(decoded, out _))
+                if (DateTime.UtcNow - timestamp > TimeSpan.FromMinutes(60) ||
+                    !_cache.TryGetValue(code, out int cachedGroupId) || !(cachedGroupId == groupId))
                 {
                     return (false, 0);
                 }
