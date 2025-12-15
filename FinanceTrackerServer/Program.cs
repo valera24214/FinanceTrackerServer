@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Npgsql;
+using System.Data;
 using System.Reflection;
 using System.Text;
 
@@ -39,6 +41,12 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Postgres")));
 
+builder.Services.AddScoped<IDbConnection>(sp =>
+{
+    var configuration = sp.GetRequiredService<IConfiguration>();
+    return new NpgsqlConnection(builder.Configuration.GetConnectionString("Postgres"));
+});
+
 // Services
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddMemoryCache();
@@ -47,6 +55,8 @@ builder.Services.AddScoped<IGroupService, GroupService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IAuthAccountFactory, AuthAccountsFactory>();
+builder.Services.AddTransient<IBalanceService,  BalanceService>();
+builder.Services.AddHostedService <BackgroundBalanceService>();
 
 
 builder.Services.AddSwaggerGen(options =>

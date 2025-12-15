@@ -31,8 +31,7 @@ namespace FinanceTrackerServer.Migrations
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    Name = table.Column<string>(type: "text", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn)
                 },
                 constraints: table =>
                 {
@@ -75,6 +74,27 @@ namespace FinanceTrackerServer.Migrations
                     table.PrimaryKey("PK_AuthAccounts", x => x.Id);
                     table.ForeignKey(
                         name: "FK_AuthAccounts_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Balances",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    UserId = table.Column<int>(type: "integer", nullable: false),
+                    UserBalance = table.Column<decimal>(type: "numeric", nullable: false),
+                    Date = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Balances", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Balances_Users_UserId",
                         column: x => x.UserId,
                         principalTable: "Users",
                         principalColumn: "Id",
@@ -129,6 +149,12 @@ namespace FinanceTrackerServer.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Balances_UserId_Date",
+                table: "Balances",
+                columns: new[] { "UserId", "Date" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Transactions_CategoryId",
                 table: "Transactions",
                 column: "CategoryId");
@@ -154,6 +180,9 @@ namespace FinanceTrackerServer.Migrations
         {
             migrationBuilder.DropTable(
                 name: "AuthAccounts");
+
+            migrationBuilder.DropTable(
+                name: "Balances");
 
             migrationBuilder.DropTable(
                 name: "Transactions");

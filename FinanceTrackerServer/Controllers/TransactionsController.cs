@@ -15,11 +15,13 @@ namespace FinanceTrackerServer.Controllers
     public class TransactionsController : ControllerBase
     {
         private readonly ITransactionService _transactionService;
+        private readonly IBalanceService _balanceService;
         private readonly AppDbContext _context;
 
-        public TransactionsController(ITransactionService transactionService, AppDbContext context)
+        public TransactionsController(ITransactionService transactionService, IBalanceService balanceService ,AppDbContext context)
         {
             _transactionService = transactionService;
+            _balanceService = balanceService;
             _context = context;
         }
 
@@ -62,7 +64,9 @@ namespace FinanceTrackerServer.Controllers
                 var user = await _context.Users.FindAsync(userId);
 
                 var transaction = await _transactionService.Create(dto, userId);
-                return Ok(transaction);
+                var balance = await _balanceService.CalculateBalanceForPeriod(userId, transaction.Date);
+
+                return Ok(balance);
             }
             catch (Exception ex)
             {
@@ -95,8 +99,10 @@ namespace FinanceTrackerServer.Controllers
             {
                 var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
 
-                var transaction = await _transactionService.Update(dto, userId);
-                return Ok(transaction);
+                var transaction = await _transactionService.Update(dto);
+                var balance = await _balanceService.CalculateBalanceForPeriod(userId, transaction.Date);
+
+                return Ok(balance);
             }
             catch (Exception ex)
             {
@@ -110,9 +116,11 @@ namespace FinanceTrackerServer.Controllers
             try
             {
                 var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
-
-                await _transactionService.Delete(id, userId);
-                return Ok();
+                var transaction = await _transactionService.Get(userId);
+                var date = transaction.Date;
+                await _transactionService.Delete(id);
+                var balance = await _balanceService.CalculateBalanceForPeriod(userId, date);
+                return Ok(balance);
             }
             catch (Exception ex)
             {
@@ -125,9 +133,6 @@ namespace FinanceTrackerServer.Controllers
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
             var user = await _context.Users.FindAsync(userId);
-
-            Console.WriteLine($"Raw Period: {HttpContext.Request.Query["Period"]}");
-            Console.WriteLine($"Bound Period: {period?.Period}");
 
             var stats = await _transactionService.GetUserStats(userId, period);
 

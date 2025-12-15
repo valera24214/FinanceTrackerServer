@@ -39,14 +39,11 @@ namespace FinanceTrackerServer.Services
             return transactionDto;
         }
 
-        public async Task<TransactionDto> Update(UpdateTransactionDto dto, int userId)
+        public async Task<TransactionDto> Update(UpdateTransactionDto dto)
         {
             var transaction = await _context.Transactions.FirstOrDefaultAsync(t => t.Id == dto.Id);
             if (transaction == null)
                 throw new ArgumentException($"Transaction with id {dto.Id} not found");
-
-            if (transaction.UserId != userId)
-                throw new UnauthorizedAccessException("You are not the owner of this transaction");
 
             transaction.Amount = dto.Amount;
             transaction.Description = dto.Description;
@@ -57,27 +54,21 @@ namespace FinanceTrackerServer.Services
             return transactionDto;
         }
 
-        public async Task Delete(int id, int userId)
+        public async Task Delete(int id)
         {
             var transaction = await _context.Transactions.FirstOrDefaultAsync(t => t.Id == id);
             if (transaction == null)
                 throw new ArgumentException($"Transaction with id {id} not found");
-
-            if (transaction.UserId != userId)
-                throw new UnauthorizedAccessException("You are not the owner of this transaction");
 
             _context.Transactions.Remove(transaction);
             await _context.SaveChangesAsync();
         }
 
-        public async Task<TransactionDto> Get(int id, int userId)
+        public async Task<TransactionDto> Get(int id)
         {
             var transaction = await _context.Transactions.FirstOrDefaultAsync(t => t.Id == id);
             if (transaction == null)
                 throw new ArgumentException($"Transaction with id {id} not found");
-
-            if (transaction.UserId != userId)
-                throw new UnauthorizedAccessException("Access to transaction denied");
 
             var transactionDto = ConvertToDto(transaction);
             return transactionDto;

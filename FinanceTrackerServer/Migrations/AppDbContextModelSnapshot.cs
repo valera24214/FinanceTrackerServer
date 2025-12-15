@@ -58,6 +58,31 @@ namespace FinanceTrackerServer.Migrations
                     b.ToTable("AuthAccounts");
                 });
 
+            modelBuilder.Entity("FinanceTrackerServer.Models.Entities.Balance", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("UserBalance")
+                        .HasColumnType("numeric");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "Date")
+                        .IsUnique();
+
+                    b.ToTable("Balances");
+                });
+
             modelBuilder.Entity("FinanceTrackerServer.Models.Entities.Category", b =>
                 {
                     b.Property<int>("Id")
@@ -155,6 +180,17 @@ namespace FinanceTrackerServer.Migrations
                 {
                     b.HasOne("FinanceTrackerServer.Models.Entities.User", "User")
                         .WithMany("AuthAccounts")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("FinanceTrackerServer.Models.Entities.Balance", b =>
+                {
+                    b.HasOne("FinanceTrackerServer.Models.Entities.User", "User")
+                        .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
