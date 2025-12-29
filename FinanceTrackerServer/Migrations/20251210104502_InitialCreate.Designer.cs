@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FinanceTrackerServer.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20251112121929_InitialCreate")]
+    [Migration("20251210104502_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -61,6 +61,31 @@ namespace FinanceTrackerServer.Migrations
                     b.ToTable("AuthAccounts");
                 });
 
+            modelBuilder.Entity("FinanceTrackerServer.Models.Entities.Balance", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("UserBalance")
+                        .HasColumnType("numeric");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "Date")
+                        .IsUnique();
+
+                    b.ToTable("Balances");
+                });
+
             modelBuilder.Entity("FinanceTrackerServer.Models.Entities.Category", b =>
                 {
                     b.Property<int>("Id")
@@ -89,10 +114,6 @@ namespace FinanceTrackerServer.Migrations
                         .HasColumnType("integer");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
@@ -162,6 +183,17 @@ namespace FinanceTrackerServer.Migrations
                 {
                     b.HasOne("FinanceTrackerServer.Models.Entities.User", "User")
                         .WithMany("AuthAccounts")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("FinanceTrackerServer.Models.Entities.Balance", b =>
+                {
+                    b.HasOne("FinanceTrackerServer.Models.Entities.User", "User")
+                        .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
