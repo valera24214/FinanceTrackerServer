@@ -49,7 +49,7 @@ namespace FinanceTrackerServer.Services
                         ""UserBalance"" AS PrevBalance
                     FROM ""Balances""
                     WHERE ""UserId"" = @UserId 
-                      AND ""Date"" = @TargetDate - interval '1 day'
+                      AND ""Date""::date = @TargetDate::date - interval '1 day'
                     )
 
                     SELECT    

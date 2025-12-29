@@ -55,6 +55,7 @@ builder.Services.AddScoped<IGroupService, GroupService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IAuthAccountFactory, AuthAccountsFactory>();
+builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddTransient<IBalanceService,  BalanceService>();
 builder.Services.AddHostedService <BackgroundBalanceService>();
 

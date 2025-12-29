@@ -18,10 +18,8 @@
   <ItemGroup>
     <Compile Remove="Controllers\UserController.cs" />
     <Compile Remove="Services\Interfaces\ITelegramAuthService.cs" />
-    <Compile Remove="Services\Interfaces\IUserService.cs" />
     <Compile Remove="Services\TelegramAuthServive.cs" />
     <Compile Remove="Services\UserDtoMapper.cs" />
-    <Compile Remove="Services\UserService.cs" />
   </ItemGroup>
 
   <ItemGroup>
