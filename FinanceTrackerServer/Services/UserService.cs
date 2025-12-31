@@ -8,36 +8,23 @@ namespace FinanceTrackerServer.Services
     public class UserService:IUserService
     {
         private readonly AppDbContext _context;
-       
-        public UserService(AppDbContext context) 
-        { 
+
+        public UserService(AppDbContext context)
+        {
             _context = context;
         }
 
-        public async Task BindTelegram(int userId, long telegramId, string telegramUsername)
+        public async Task<User> GetUserAsync(int userId)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
-            if (user.TelegramId.HasValue)
-                throw new ArgumentException("User already have telegram data");
+            var user = await _context.Users.FindAsync(userId);
 
-            user.TelegramId = telegramId;
-            user.TelegramUsername = telegramUsername;
-
-            _context.Users.Update(user);
-            await _context.SaveChangesAsync();
+            return user;
         }
 
-        public async Task BindEmail(int userId, string email, string password)
+        public async Task<List<User>> GetUsersByGroupAsync(int groupId)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u=>u.Id == userId);
-            if (!string.IsNullOrEmpty(user.Email))
-                throw new ArgumentException("User already have email");
-
-            user.Email = email;
-            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(password);
-
-            _context.Users.Update(user);
-            await _context.SaveChangesAsync();
+            var users = _context.Users.Where(u=>u.GroupId == groupId).ToList();
+            return users;
         }
     }
 }

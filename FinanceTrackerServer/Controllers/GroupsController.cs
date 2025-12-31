@@ -83,7 +83,7 @@ namespace FinanceTrackerServer.Controllers
             }
 
             var code = _groupService.GenerateInviteCode((int)user.GroupId);
-            return Ok(new { code, expiresIn = "60 minutes" });
+            return Ok(new { code, expiresIn = "15 minutes" });
         }
 
         [HttpPost("join")]

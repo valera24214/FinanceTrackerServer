@@ -12,6 +12,7 @@ namespace FinanceTrackerServer.Data
         public DbSet<Transaction> Transactions { get; set; }
         public DbSet<Category> Categories { get; set; }
         public DbSet<AuthAccount> AuthAccounts { get; set; }
+        public DbSet<Balance> Balances { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -20,6 +21,19 @@ namespace FinanceTrackerServer.Data
                 .WithMany(g => g.Users)
                 .HasForeignKey(u => u.GroupId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<Balance>(entity =>
+            {
+                entity.HasKey(b=>b.Id);
+                entity.HasOne(u => u.User)
+                .WithMany()
+                .HasForeignKey(b => b.UserId)
+                .IsRequired()
+                .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(s => new { s.UserId, s.Date })
+                .IsUnique();
+            });
 
             modelBuilder.Entity<Transaction>()
                 .HasOne(t => t.User)

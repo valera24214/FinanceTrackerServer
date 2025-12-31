@@ -52,7 +52,7 @@ namespace FinanceTrackerServer.Services
             var code = $"{groupId}_{timestamp}";
             var encoded = Convert.ToBase64String(Encoding.UTF8.GetBytes(code));
 
-            _cache.Set(encoded, groupId, TimeSpan.FromMinutes(60));
+            _cache.Set(encoded, groupId, TimeSpan.FromMinutes(15));
 
             return encoded;
         }
