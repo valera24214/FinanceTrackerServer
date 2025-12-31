@@ -39,14 +39,11 @@ namespace FinanceTrackerServer.Services
             return transactionDto;
         }
 
-        public async Task<TransactionDto> Update(UpdateTransactionDto dto, int userId)
+        public async Task<TransactionDto> Update(UpdateTransactionDto dto)
         {
             var transaction = await _context.Transactions.FirstOrDefaultAsync(t => t.Id == dto.Id);
             if (transaction == null)
                 throw new ArgumentException($"Transaction with id {dto.Id} not found");
-
-            if (transaction.UserId != userId)
-                throw new UnauthorizedAccessException("You are not the owner of this transaction");
 
             transaction.Amount = dto.Amount;
             transaction.Description = dto.Description;
@@ -57,27 +54,21 @@ namespace FinanceTrackerServer.Services
             return transactionDto;
         }
 
-        public async Task Delete(int id, int userId)
+        public async Task Delete(int id)
         {
             var transaction = await _context.Transactions.FirstOrDefaultAsync(t => t.Id == id);
             if (transaction == null)
                 throw new ArgumentException($"Transaction with id {id} not found");
-
-            if (transaction.UserId != userId)
-                throw new UnauthorizedAccessException("You are not the owner of this transaction");
 
             _context.Transactions.Remove(transaction);
             await _context.SaveChangesAsync();
         }
 
-        public async Task<TransactionDto> Get(int id, int userId)
+        public async Task<TransactionDto> Get(int id)
         {
             var transaction = await _context.Transactions.FirstOrDefaultAsync(t => t.Id == id);
             if (transaction == null)
                 throw new ArgumentException($"Transaction with id {id} not found");
-
-            if (transaction.UserId != userId)
-                throw new UnauthorizedAccessException("Access to transaction denied");
 
             var transactionDto = ConvertToDto(transaction);
             return transactionDto;
@@ -150,7 +141,7 @@ namespace FinanceTrackerServer.Services
             var stats = new TransactionStats
             {
                 TotalIncome = await query.Where(t => t.Type == TransactionType.Income).SumAsync(t => t.Amount),
-                TotalExpenses = await query.Where(t => t.Type == TransactionType.Expense).SumAsync(t => t.Amount),
+                TotalExpense = await query.Where(t => t.Type == TransactionType.Expense).SumAsync(t => t.Amount),
                 TransactionCount = await query.CountAsync(),
                 LastTransactionDate = await query.MaxAsync(t => (DateTime?)t.Date),
                 PeriodStart = startDate,
@@ -177,7 +168,7 @@ namespace FinanceTrackerServer.Services
             response.GroupTotal = new TransactionStats
             {
                 TotalIncome = await groupQuery.Where(t => t.Type == TransactionType.Income).SumAsync(t => t.Amount),
-                TotalExpenses = await groupQuery.Where(t => t.Type == TransactionType.Expense).SumAsync(t => t.Amount),
+                TotalExpense = await groupQuery.Where(t => t.Type == TransactionType.Expense).SumAsync(t => t.Amount),
                 TransactionCount = await groupQuery.CountAsync(),
                 LastTransactionDate = await groupQuery.MaxAsync(t => (DateTime?)t.Date),
                 PeriodStart = startDate,
@@ -300,8 +291,8 @@ namespace FinanceTrackerServer.Services
     public class TransactionStats
     {
         public decimal TotalIncome { get; set; }
-        public decimal TotalExpenses { get; set; }
-        public decimal Balance => TotalIncome - TotalExpenses;
+        public decimal TotalExpense{ get; set; }
+  
         public int TransactionCount { get; set; }
         public DateTime? LastTransactionDate { get; set; }
         public DateTime? PeriodStart { get; set; }
