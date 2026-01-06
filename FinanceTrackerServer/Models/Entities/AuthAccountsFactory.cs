@@ -54,6 +54,7 @@ namespace FinanceTrackerServer.Models.Entities
                 Provider = AuthProvider.Password,
                 ProviderId = normalized,
                 PasswordHash = hash,
+                MetaData = dto.Email
             };
 
             return await AddAuthAccount(acct);

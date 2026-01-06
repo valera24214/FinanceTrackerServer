@@ -1,4 +1,5 @@
 ﻿using FinanceTrackerServer.Models.DTO.AuthAccounts;
+using FinanceTrackerServer.Models.Entities;
 using FinanceTrackerServer.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
@@ -30,7 +31,7 @@ namespace FinanceTrackerServer.Controllers
             {
                 return BadRequest(ex.Message);
             }
-        }
+        } 
 
         [HttpPost("login/password")]
         public async Task<IActionResult> Login(PasswordAccountDto dto)

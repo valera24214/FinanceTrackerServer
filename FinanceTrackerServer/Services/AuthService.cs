@@ -27,7 +27,7 @@ namespace FinanceTrackerServer.Services
             return await _context.AuthAccounts.AnyAsync(x => x.ProviderId == providerId);
         }
 
-        private string GenerateToken(User user)
+        private string GenerateJwtToken(User user)
         {
             var claims = new List<Claim>
             {
@@ -73,7 +73,7 @@ namespace FinanceTrackerServer.Services
             if (!BCrypt.Net.BCrypt.Verify(dto.Password, acct.PasswordHash))
                 throw new ArgumentException("Invalid password");
 
-            return GenerateToken(user);
+            return GenerateJwtToken(user);
         }
 
         private async Task<User> RegisterByTelegram(TelegramAccountDto dto)
@@ -103,7 +103,7 @@ namespace FinanceTrackerServer.Services
                 user = _context.Users.FirstOrDefault(u => u.Id == acct.UserId);
             }
 
-            return GenerateToken(user);
+            return GenerateJwtToken(user);
         }
 
         
