@@ -3,9 +3,14 @@ using FinanceTrackerServer.Models.DTO.AuthAccounts;
 using FinanceTrackerServer.Models.Entities;
 using FinanceTrackerServer.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.IdentityModel.Tokens;
+using Newtonsoft.Json.Linq;
 using System.IdentityModel.Tokens.Jwt;
+using System.Net;
+using System.Net.Mail;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace FinanceTrackerServer.Services
@@ -13,11 +18,13 @@ namespace FinanceTrackerServer.Services
     public class AuthService : IAuthService
     {
         private readonly AppDbContext _context;
+        private readonly IDistributedCache _cache;
         private readonly IConfiguration _config;
         private readonly IAuthAccountFactory _authFactory;
-        public AuthService(AppDbContext context, IConfiguration configuration, IAuthAccountFactory authFactory)
+        public AuthService(AppDbContext context, IDistributedCache cache, IConfiguration configuration, IAuthAccountFactory authFactory)
         {
             _context = context;
+            _cache = cache;
             _config = configuration;
             _authFactory = authFactory;
         }
@@ -48,18 +55,92 @@ namespace FinanceTrackerServer.Services
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
-        public async Task<AuthAccount> RegisterByPassword(PasswordAccountDto dto)
+        private string GenerateEmailVerificationCode()
         {
-            if (await UserExist(dto.Email))
-                throw new ArgumentException("User already registered");
+            var rnd = new Random();
+            StringBuilder sb = new StringBuilder();
 
-            var user = new User();
-            await _context.Users.AddAsync(user);
-            await _context.SaveChangesAsync();
+            for (int i = 0; i < 6; i++)
+            {
+                sb.Append(rnd.Next(10));
+            }
 
-            var acct = await _authFactory.CreatePasswordAccountAsync(user.Id, dto);
+            return sb.ToString();
+        }
 
-            return acct;
+        public async Task<string> SendEmailVerificationCode(string email)
+        {
+            if (await UserExist(email))
+                throw new ArgumentException("email already registered");
+
+            var code = GenerateEmailVerificationCode();
+
+            var mail = new MailMessage();
+            mail.From = new MailAddress(_config["Email:Address"]);
+            mail.To.Add(email);
+            mail.Subject = "Подтверждение регистрации";
+            mail.Body = $"Код для подтверждения электронной почты: {code}";
+
+            using var smtp = new SmtpClient("smtp.gmail.com", 587)
+            {
+                EnableSsl = true,
+                Credentials = new NetworkCredential(_config["Email:Address"], _config["Email:Password"])
+            };
+
+            smtp.Send(mail);
+
+            await SetEmailCache(email, code);
+
+            return code;
+        }
+
+        private async Task SetEmailCache(string email, string code)
+        {
+            await _cache.SetStringAsync(code, email, new DistributedCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(15)
+            });
+        }
+
+        public async Task<string?> VerifyEmail(string emailToken)
+        {
+            var email = await _cache.GetStringAsync(emailToken);
+            if (email == null)
+                throw new ArgumentNullException("email");
+            else
+            {
+                await _cache.RemoveAsync(emailToken);
+
+                var regToken = Guid.NewGuid().ToString("N");
+                await SetEmailCache(email, regToken);
+
+                return regToken;
+            }
+        }
+
+        public async Task SetPassword(string regToken, string password)
+        {
+            var email = await _cache.GetStringAsync(regToken);
+            if (email == null)
+                throw new ArgumentNullException();
+            else
+            {
+                await _cache.RemoveAsync(regToken);
+
+                var passwordDto = new PasswordAccountDto
+                {
+                    Email = email,
+                    Password = password
+                };
+
+                var user = new User();
+                await _context.Users.AddAsync(user);
+                await _context.SaveChangesAsync();
+
+                var acct = _authFactory.CreatePasswordAccount(user.Id, passwordDto);
+                await _context.AuthAccounts.AddAsync(acct);
+                await _context.SaveChangesAsync();
+            }
         }
 
         public async Task<string> LoginByPassword(PasswordAccountDto dto)
@@ -85,7 +166,9 @@ namespace FinanceTrackerServer.Services
             await _context.Users.AddAsync(user);
             await _context.SaveChangesAsync();
 
-            var acct = _authFactory.CreateTelegramAccountAsync(user.Id, dto);
+            var acct = _authFactory.CreateTelegramAccount(user.Id, dto);
+            await _context.AuthAccounts.AddAsync(acct);
+            await _context.SaveChangesAsync();
 
             return user;
         }
@@ -97,7 +180,7 @@ namespace FinanceTrackerServer.Services
             {
                 user = await RegisterByTelegram(dto);
             }
-            else 
+            else
             {
                 var acct = _context.AuthAccounts.FirstOrDefault(u => u.ProviderId == dto.Id.ToString());
                 user = _context.Users.FirstOrDefault(u => u.Id == acct.UserId);
@@ -106,6 +189,6 @@ namespace FinanceTrackerServer.Services
             return GenerateJwtToken(user);
         }
 
-        
+
     }
 }

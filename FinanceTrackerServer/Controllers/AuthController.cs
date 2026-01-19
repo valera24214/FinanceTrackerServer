@@ -16,25 +16,53 @@ namespace FinanceTrackerServer.Controllers
             _authService = authService;
         }
 
-        [HttpPost("register/password")]
-        public async Task<IActionResult> RegisterByPassword(PasswordAccountDto dto)
+        [HttpGet("register/password/send_email_code")]
+        public async Task<IActionResult> SendEmailCode([FromQuery] string email)
         {
             try
             {
-                await _authService.RegisterByPassword(dto);
+                await _authService.SendEmailVerificationCode(email);
                 return Ok(new
                 {
-                    message = "Registration successful"
+                    success = true
                 });
             }
             catch (Exception ex)
             {
                 return BadRequest(ex.Message);
             }
-        } 
+        }
+
+        [HttpGet("register/password/verify_email")]
+        public async Task<IActionResult> VerifyEmail([FromQuery] string verification_code)
+        {
+            try
+            {
+                var regToken = await _authService.VerifyEmail(verification_code);
+                return Ok(new { registration_token = regToken });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpPost("register/password/set_password")]
+        public async Task<IActionResult> SetPassword([FromQuery] string regToken,[FromBody] string password)
+        {
+            try
+            {
+                await _authService.SetPassword(regToken, password);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
 
         [HttpPost("login/password")]
-        public async Task<IActionResult> Login(PasswordAccountDto dto)
+        public async Task<IActionResult> LoginByPassword([FromBody] PasswordAccountDto dto)
         {
             try
             {

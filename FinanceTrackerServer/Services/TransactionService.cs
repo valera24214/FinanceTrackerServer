@@ -143,7 +143,7 @@ namespace FinanceTrackerServer.Services
                 TotalIncome = await query.Where(t => t.Type == TransactionType.Income).SumAsync(t => t.Amount),
                 TotalExpense = await query.Where(t => t.Type == TransactionType.Expense).SumAsync(t => t.Amount),
                 TransactionCount = await query.CountAsync(),
-                LastTransactionDate = await query.MaxAsync(t => (DateTime?)t.Date),
+                LastTransactionDate = await query.MaxAsync(t => (DateTime)t.Date),
                 PeriodStart = startDate,
                 PeriodEnd = endDate,
                 CategoryStats = await GetCategoryStats(query, totalIncome, totalExpenses)
@@ -170,7 +170,7 @@ namespace FinanceTrackerServer.Services
                 TotalIncome = await groupQuery.Where(t => t.Type == TransactionType.Income).SumAsync(t => t.Amount),
                 TotalExpense = await groupQuery.Where(t => t.Type == TransactionType.Expense).SumAsync(t => t.Amount),
                 TransactionCount = await groupQuery.CountAsync(),
-                LastTransactionDate = await groupQuery.MaxAsync(t => (DateTime?)t.Date),
+                LastTransactionDate = await groupQuery.MaxAsync(t => (DateTime)t.Date),
                 PeriodStart = startDate,
                 PeriodEnd = endDate,
                 CategoryStats = await GetCategoryStats(groupQuery, groupTotalIncome, groupTotalExpenses)
@@ -294,7 +294,7 @@ namespace FinanceTrackerServer.Services
         public decimal TotalExpense{ get; set; }
   
         public int TransactionCount { get; set; }
-        public DateTime? LastTransactionDate { get; set; }
+        public DateTime LastTransactionDate { get; set; }
         public DateTime? PeriodStart { get; set; }
         public DateTime? PeriodEnd { get; set; }
 

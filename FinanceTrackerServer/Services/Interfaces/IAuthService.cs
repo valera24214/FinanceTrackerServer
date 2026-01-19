@@ -5,7 +5,9 @@ namespace FinanceTrackerServer.Services.Interfaces
 {
     public interface IAuthService
     {
-        Task<AuthAccount> RegisterByPassword(PasswordAccountDto dto);
+        Task<string> SendEmailVerificationCode(string email);
+        Task<string?> VerifyEmail(string emailToken);
+        Task SetPassword(string regToken, string password);
         Task<string> LoginByPassword(PasswordAccountDto dto);
 
         Task<string> LoginByTelegram(TelegramAccountDto dto);

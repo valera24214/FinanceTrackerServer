@@ -47,6 +47,13 @@ builder.Services.AddScoped<IDbConnection>(sp =>
     return new NpgsqlConnection(builder.Configuration.GetConnectionString("Postgres"));
 });
 
+//Redis cache
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = "localhost";
+    options.InstanceName = "local";
+});
+
 // Services
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddMemoryCache();
@@ -59,6 +66,16 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddTransient<IBalanceService,  BalanceService>();
 builder.Services.AddHostedService <BackgroundBalanceService>();
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy
+            .WithOrigins("http://localhost:5173")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
 
 builder.Services.AddSwaggerGen(options =>
 {
@@ -107,6 +124,8 @@ if (app.Environment.IsDevelopment())
         options.SwaggerEndpoint("/swagger/v1/swagger.json", "Finance Tracker v1");
     });
 }
+
+app.UseCors("AllowFrontend");
 
 using (var scope = app.Services.CreateScope())
 {
