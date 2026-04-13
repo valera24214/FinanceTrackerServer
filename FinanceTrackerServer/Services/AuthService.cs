@@ -68,6 +68,16 @@ namespace FinanceTrackerServer.Services
             return sb.ToString();
         }
 
+        private string QuickSha256Hash(string input)
+        {
+            var inputBytes = Encoding.UTF8.GetBytes(input);
+            using (var sha256 = SHA256.Create())
+            {
+                var hash = sha256.ComputeHash(inputBytes);
+                return Convert.ToHexString(hash).ToLower();
+            }
+        }
+
         public async Task<string> SendEmailVerificationCode(string email)
         {
             if (await UserExist(email))
@@ -143,18 +153,56 @@ namespace FinanceTrackerServer.Services
             }
         }
 
-        public async Task<string> LoginByPassword(PasswordAccountDto dto)
+        public async Task<(string jwtToken, string refreshToken)> LoginByPassword(PasswordAccountDto dto)
         {
             if (!await UserExist(dto.Email))
                 throw new ArgumentException("This user doesn't exist");
 
             var acct = _context.AuthAccounts.FirstOrDefault(a => a.ProviderId == dto.Email);
-            var user = _context.Users.FirstOrDefault(u => u.Id == acct.UserId);
 
             if (!BCrypt.Net.BCrypt.Verify(dto.Password, acct.PasswordHash))
                 throw new ArgumentException("Invalid password");
 
-            return GenerateJwtToken(user);
+            var user = _context.Users.FirstOrDefault(u => u.Id == acct.UserId);
+
+            var refreshToken = Guid.NewGuid().ToString();
+            var refreshTokenHash = QuickSha256Hash(refreshToken);
+
+            await _cache.SetStringAsync(refreshTokenHash, acct.UserId.ToString(), new DistributedCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromDays(14)
+            });
+
+            return (GenerateJwtToken(user), refreshToken);
+        }
+
+        public async Task<(string jwtToken, string refreshToken)> RefreshTokens(string refreshToken)
+        {
+            if (refreshToken == null)
+                throw new ArgumentException("Refresh token is null");
+
+            var refreshTokenHash = QuickSha256Hash(refreshToken);
+            var userIdStr = await _cache.GetStringAsync(refreshTokenHash);
+            if (userIdStr == null)
+                throw new ArgumentNullException("Refresh token doesn't exist or has been expired");
+  
+            var userId = Convert.ToInt32(userIdStr);
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+            if (user == null)
+                throw new ArgumentNullException("User not found");
+
+            var acct = await _context.AuthAccounts.FirstOrDefaultAsync(a => a.UserId == userId);
+
+            var newRefreshToken = Guid.NewGuid().ToString();
+            refreshTokenHash = QuickSha256Hash(newRefreshToken);
+            
+            await _cache.RemoveAsync(refreshTokenHash);
+            await _cache.SetStringAsync(refreshTokenHash, userId.ToString(), new DistributedCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromDays(14)
+            });
+
+            return (GenerateJwtToken(user), newRefreshToken);
         }
 
         private async Task<User> RegisterByTelegram(TelegramAccountDto dto)

@@ -8,7 +8,9 @@ namespace FinanceTrackerServer.Services.Interfaces
         Task<string> SendEmailVerificationCode(string email);
         Task<string?> VerifyEmail(string emailToken);
         Task SetPassword(string regToken, string password);
-        Task<string> LoginByPassword(PasswordAccountDto dto);
+
+        Task<(string jwtToken, string refreshToken)> LoginByPassword(PasswordAccountDto dto);
+        Task<(string jwtToken, string refreshToken)> RefreshTokens(string refreshToken);
 
         Task<string> LoginByTelegram(TelegramAccountDto dto);
     }

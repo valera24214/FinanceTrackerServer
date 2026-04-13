@@ -66,11 +66,54 @@ namespace FinanceTrackerServer.Controllers
         {
             try
             {
-                var token = await _authService.LoginByPassword(dto);
-                if (token == null)
+                var result = await _authService.LoginByPassword(dto);
+                if (result.jwtToken == null)
                     return Unauthorized("Invalid credentials");
 
-                return Ok(new { token = token });
+                Response.Cookies.Append("refreshToken", result.refreshToken,
+                    new CookieOptions
+                    {
+                        HttpOnly = true,
+                        Secure = true,
+                        SameSite = SameSiteMode.None,
+                        Expires = DateTime.UtcNow.AddDays(14),
+                        Domain = "localhost"
+                    }
+                );
+
+                return Ok(new { token = result.jwtToken });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpPost("login/refresh")]
+        public async Task<IActionResult> RefreshTokens()
+        {
+            try 
+            {
+                var refreshToken = Request.Cookies["refreshToken"];
+                var result = await _authService.RefreshTokens(refreshToken);
+
+                if (result.jwtToken == null)
+                    return Unauthorized("Invalid credentials");
+
+                Response.Cookies.Delete("refreshToken");
+                Response.Cookies.Append("refreshToken", result.refreshToken,
+                    new CookieOptions
+                    {
+                        HttpOnly = true,
+                        Secure = true,
+                        SameSite = SameSiteMode.None,
+                        Expires = DateTime.UtcNow.AddDays(14),
+                        Domain = "localhost",
+
+                    }
+                );
+
+                return Ok(new { token = result.jwtToken });
             }
             catch (Exception ex)
             {

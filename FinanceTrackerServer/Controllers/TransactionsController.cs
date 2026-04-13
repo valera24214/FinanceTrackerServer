@@ -73,23 +73,6 @@ namespace FinanceTrackerServer.Controllers
             }
         }
 
-        [HttpGet]
-        public async Task<IActionResult> Get([FromQuery] TransactionFilterRequest filter)
-        {
-            try
-            {
-                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
-
-                var transactions = await _transactionService.GetTransactionsByUser(userId, filter);
-                return Ok(transactions);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
-
-        }
-
         [HttpGet("balance")]
         public async Task<IActionResult> GetBalance()
         {
@@ -107,7 +90,7 @@ namespace FinanceTrackerServer.Controllers
             }
         }
 
-        [HttpPut]
+        [HttpPut("update")]
         public async Task<IActionResult> Update([FromBody] UpdateTransactionDto dto)
         {
             try

@@ -35,7 +35,6 @@ builder.Services.AddAuthorization();
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 
 // Database
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -66,16 +65,7 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddTransient<IBalanceService,  BalanceService>();
 builder.Services.AddHostedService <BackgroundBalanceService>();
 
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowFrontend", policy =>
-    {
-        policy
-            .WithOrigins("http://localhost:5173")
-            .AllowAnyHeader()
-            .AllowAnyMethod();
-    });
-});
+builder.Services.AddCors();
 
 builder.Services.AddSwaggerGen(options =>
 {
@@ -125,7 +115,7 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseCors("AllowFrontend");
+
 
 using (var scope = app.Services.CreateScope())
 {
@@ -135,8 +125,21 @@ using (var scope = app.Services.CreateScope())
 
 app.UseHttpsRedirection();
 
+app.UseRouting();
+
+app.UseCors(policy =>
+{
+    policy
+        .WithOrigins("https://localhost:5173")
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials();
+});
+
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
 
 app.Run();
