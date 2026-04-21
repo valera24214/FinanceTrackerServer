@@ -1,4 +1,5 @@
 ﻿using FinanceTrackerServer.Data;
+using FinanceTrackerServer.Models;
 using FinanceTrackerServer.Models.DTO;
 using FinanceTrackerServer.Models.Entities;
 using FinanceTrackerServer.Services.Interfaces;
@@ -25,7 +26,7 @@ namespace FinanceTrackerServer.Services
             await _context.Groups.AddAsync(group);
             await _context.SaveChangesAsync();
 
-            return new GroupDto 
+            return new GroupDto
             {
                 Id = group.Id,
             };
@@ -35,7 +36,7 @@ namespace FinanceTrackerServer.Services
         {
             var group = await _context.Groups.FirstOrDefaultAsync(g => g.Id == id);
             if (group == null)
-                throw new ArgumentNullException("Invalid group id");
+                throw new NotFoundException("Group Doesn't Exist");
 
             _context.Groups.Remove(group);
             await _context.SaveChangesAsync();
@@ -43,6 +44,9 @@ namespace FinanceTrackerServer.Services
 
         public string GenerateInviteCode(int groupId)
         {
+            if (!_context.Groups.Any(g => g.Id == groupId))
+                throw new NotFoundException("Group Doesn't Exist");
+
             if (_cache.TryGetValue(groupId, out string existingCode))
             {
                 return existingCode;
@@ -59,31 +63,25 @@ namespace FinanceTrackerServer.Services
 
         public (bool isValid, int groupId) ValidateInviteCode(string code)
         {
-            try
+            var decoded = Encoding.UTF8.GetString(Convert.FromBase64String(code));
+            var parts = decoded.Split('_');
+
+            if (parts.Length != 2)
+                throw new ArgumentOutOfRangeException(nameof(parts));
+
+            var groupId = int.Parse(parts[0]);
+            var timestamp = DateTime.ParseExact(parts[1], "yyyyMMddHHmm", null);
+
+            if (DateTime.UtcNow - timestamp > TimeSpan.FromMinutes(60) ||
+                !_cache.TryGetValue(code, out int cachedGroupId) ||
+                !(cachedGroupId == groupId))
             {
-                var decoded = Encoding.UTF8.GetString(Convert.FromBase64String(code));
-                var parts = decoded.Split('_');
-
-                if (parts.Length != 2) 
-                    return (false, 0);
-
-                var groupId = int.Parse(parts[0]);
-                var timestamp = DateTime.ParseExact(parts[1], "yyyyMMddHHmm", null);
-
-                if (DateTime.UtcNow - timestamp > TimeSpan.FromMinutes(60) ||
-                    !_cache.TryGetValue(code, out int cachedGroupId) || !(cachedGroupId == groupId))
-                {
-                    return (false, 0);
-                }
-
-                _cache.Remove(decoded);
-
-                return (true, groupId);
+                throw new ConflictException("Invalid Group Code");
             }
-            catch
-            {
-                return (false, 0);
-            }
+
+            _cache.Remove(decoded);
+
+            return (true, groupId);
         }
     }
 }

@@ -25,7 +25,7 @@
 
     public class UnauthorizedException : BaseException
     {
-        public UnauthorizedException(string Details) : base(Details, 400, "Unauthorized") { }
+        public UnauthorizedException(string Details) : base(Details, 401, "Unauthorized") { }
     }
 
     public class NotFoundException : BaseException

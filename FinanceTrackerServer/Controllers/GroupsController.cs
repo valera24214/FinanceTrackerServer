@@ -26,47 +26,30 @@ namespace FinanceTrackerServer.Controllers
         [HttpPost("create")]
         public async Task<IActionResult> Create()
         {
-            try
-            {
-                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
-                var user = await _context.Users.FindAsync(userId);
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
+            var user = await _context.Users.FindAsync(userId);
 
-                if (user == null)
-                    return BadRequest("User not found");
+            if (user.GroupId != null)
+                return BadRequest("User already in group");
 
-                if (user.GroupId != null)
-                    return BadRequest("User already in group");
+            var group = await _groupService.Create();
+            user.GroupId = group.Id;
+            await _context.SaveChangesAsync();
 
-                var group = await _groupService.Create();
-                user.GroupId = group.Id;
-                await _context.SaveChangesAsync();
-
-                return Ok();
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+            return Ok(new { id = group.Id });
         }
 
         [HttpDelete("delete")]
         public async Task<IActionResult> Delete()
         {
-            try
-            {
-                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
-                var user = await _context.Users.FindAsync(userId);
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
+            var user = await _context.Users.FindAsync(userId);
 
-                if (!user.GroupId.HasValue)
-                    throw new NullReferenceException("This user is not in the group");
+            if (!user.GroupId.HasValue)
+                throw new NullReferenceException("This user is not in the group");
 
-                await _groupService.Delete((int)user.GroupId);
-                return Ok(new { message = "Group deleted successfully" });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest($"Could not delete: {ex.Message}");
-            }
+            await _groupService.Delete((int)user.GroupId);
+            return NoContent();
         }
 
         [HttpGet("invite_code")]
@@ -83,7 +66,7 @@ namespace FinanceTrackerServer.Controllers
             }
 
             var code = _groupService.GenerateInviteCode((int)user.GroupId);
-            return Ok(new { code, expiresIn = "15 minutes" });
+            return Ok(new { code = code, expiresIn = "15 minutes" });
         }
 
         [HttpPost("join")]
@@ -100,7 +83,7 @@ namespace FinanceTrackerServer.Controllers
             user.GroupId = groupId;
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Successfully joined group", groupId });
+            return Ok(new { groupId = groupId });
         }
     }
 }
