@@ -1,4 +1,5 @@
 ﻿using FinanceTrackerServer.Data;
+using FinanceTrackerServer.Models;
 using FinanceTrackerServer.Models.DTO.AuthAccounts;
 using FinanceTrackerServer.Models.Entities;
 using FinanceTrackerServer.Services.Interfaces;
@@ -81,7 +82,7 @@ namespace FinanceTrackerServer.Services
         public async Task<string> SendEmailVerificationCode(string email)
         {
             if (await UserExist(email))
-                throw new ArgumentException("email already registered");
+                throw new ConflictException("Email Already Registered");
 
             var code = GenerateEmailVerificationCode();
 
@@ -116,7 +117,7 @@ namespace FinanceTrackerServer.Services
         {
             var email = await _cache.GetStringAsync(emailToken);
             if (email == null)
-                throw new ArgumentNullException("email");
+                throw new NotFoundException("Email Token Not Found Or Has Been Expired");
             else
             {
                 await _cache.RemoveAsync(emailToken);
@@ -128,11 +129,11 @@ namespace FinanceTrackerServer.Services
             }
         }
 
-        public async Task SetPassword(string regToken, string password)
+        public async Task<int> SetPassword(string regToken, string password)
         {
             var email = await _cache.GetStringAsync(regToken);
             if (email == null)
-                throw new ArgumentNullException();
+                throw new NotFoundException("Email Token Not Found Or Has Been Expired");
             else
             {
                 await _cache.RemoveAsync(regToken);
@@ -150,18 +151,20 @@ namespace FinanceTrackerServer.Services
                 var acct = _authFactory.CreatePasswordAccount(user.Id, passwordDto);
                 await _context.AuthAccounts.AddAsync(acct);
                 await _context.SaveChangesAsync();
+
+                return acct.Id;
             }
         }
 
         public async Task<(string jwtToken, string refreshToken)> LoginByPassword(PasswordAccountDto dto)
         {
             if (!await UserExist(dto.Email))
-                throw new ArgumentException("This user doesn't exist");
+                throw new NotFoundException("This User Doesn't Exist");
 
             var acct = _context.AuthAccounts.FirstOrDefault(a => a.ProviderId == dto.Email);
 
             if (!BCrypt.Net.BCrypt.Verify(dto.Password, acct.PasswordHash))
-                throw new ArgumentException("Invalid password");
+                throw new UnauthorizedException("Invalid password");
 
             var user = _context.Users.FirstOrDefault(u => u.Id == acct.UserId);
 
@@ -179,17 +182,17 @@ namespace FinanceTrackerServer.Services
         public async Task<(string jwtToken, string refreshToken)> RefreshTokens(string refreshToken)
         {
             if (refreshToken == null)
-                throw new ArgumentException("Refresh token is null");
+                throw new NotFoundException("Refresh Token Not Found");
 
             var refreshTokenHash = QuickSha256Hash(refreshToken);
             var userIdStr = await _cache.GetStringAsync(refreshTokenHash);
             if (userIdStr == null)
-                throw new ArgumentNullException("Refresh token doesn't exist or has been expired");
+                throw new UnauthorizedException("Refresh Token Doesn't Exist Or Has Been Expired");
   
             var userId = Convert.ToInt32(userIdStr);
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
             if (user == null)
-                throw new ArgumentNullException("User not found");
+                throw new NotFoundException("User Not Found");
 
             var acct = await _context.AuthAccounts.FirstOrDefaultAsync(a => a.UserId == userId);
 
@@ -208,7 +211,7 @@ namespace FinanceTrackerServer.Services
         private async Task<User> RegisterByTelegram(TelegramAccountDto dto)
         {
             if (await UserExist(dto.Id.ToString()))
-                throw new ArgumentException("User already registered");
+                throw new ConflictException("User already registered");
 
             var user = new User();
             await _context.Users.AddAsync(user);
@@ -236,7 +239,5 @@ namespace FinanceTrackerServer.Services
 
             return GenerateJwtToken(user);
         }
-
-
     }
 }

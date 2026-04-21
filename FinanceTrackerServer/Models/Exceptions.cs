@@ -18,13 +18,23 @@
         }
     }
 
+    public class ValidationException : BaseException
+    {
+        public ValidationException(string Details) : base(Details, 400, "Validation Error") { }
+    }
+
+    public class UnauthorizedException : BaseException
+    {
+        public UnauthorizedException(string Details) : base(Details, 400, "Unauthorized") { }
+    }
+
     public class NotFoundException : BaseException
     {
         public NotFoundException(string Details) : base(Details, 404, "Resource not found") { }
     }
 
-    public class ValidationException : BaseException
+    public class ConflictException : BaseException
     {
-        public ValidationException(string Details) : base(Details, 400, "Validation Error") { }
+        public ConflictException(string Details) : base(Details, 409, "Resorces Conflict") { }
     }
 }
