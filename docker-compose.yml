@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  # PostgreSQL
+  db:
+    image: postgres:15
+    container_name: finance_db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=FinanceTrackerDb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d FinanceTrackerDb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+
+  # Redis
+  redis:
+    image: redis:alpine
+    container_name: finance_redis
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+
+  # ASP.NET Core API
+  api:
+    build:
+      context: .
+      dockerfile: FinanceTrackerServer/Dockerfile
+    container_name: finance_api
+    ports:
+      - "5000:8080" # Swagger-http://localhost:5000/swagger
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__Postgres=Host=db;Port=5432;Database=FinanceTrackerDb;Username=postgres;Password=${DB_PASSWORD}
+      - ConnectionStrings__Redis=redis:6379
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+        
+volumes:
+  postgres_data:
+  redis_data:

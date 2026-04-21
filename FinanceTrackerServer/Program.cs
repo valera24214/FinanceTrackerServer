@@ -49,7 +49,7 @@ builder.Services.AddScoped<IDbConnection>(sp =>
 //Redis cache
 builder.Services.AddStackExchangeRedisCache(options =>
 {
-    options.Configuration = "localhost";
+    options.Configuration = builder.Configuration.GetConnectionString("Redis");
     options.InstanceName = "local";
 });
 
@@ -116,10 +116,10 @@ if (app.Environment.IsDevelopment())
 }
 
 
-
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    context.Database.Migrate();
     DbInitializer.Initialize(context);
 }
 
