@@ -1,10 +1,12 @@
 ﻿using FinanceTrackerServer.Data;
+using FinanceTrackerServer.Models;
 using FinanceTrackerServer.Models.DTO.Pagination;
 using FinanceTrackerServer.Models.DTO.Pagination.Requests;
 using FinanceTrackerServer.Models.DTO.Stats;
 using FinanceTrackerServer.Models.DTO.Transactions;
 using FinanceTrackerServer.Models.Entities;
 using FinanceTrackerServer.Services.Interfaces;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using static FinanceTrackerServer.Models.DTO.Stats.StatsPeriodRequest;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
@@ -43,7 +45,7 @@ namespace FinanceTrackerServer.Services
         {
             var transaction = await _context.Transactions.FirstOrDefaultAsync(t => t.Id == dto.Id);
             if (transaction == null)
-                throw new ArgumentException($"Transaction with id {dto.Id} not found");
+                throw new NotFoundException($"Transaction with id {dto.Id} not found");
 
             transaction.Amount = dto.Amount;
             transaction.Description = dto.Description;
@@ -58,7 +60,7 @@ namespace FinanceTrackerServer.Services
         {
             var transaction = await _context.Transactions.FirstOrDefaultAsync(t => t.Id == id);
             if (transaction == null)
-                throw new ArgumentException($"Transaction with id {id} not found");
+                throw new NotFoundException($"Transaction with id {id} not found");
 
             _context.Transactions.Remove(transaction);
             await _context.SaveChangesAsync();
@@ -68,7 +70,7 @@ namespace FinanceTrackerServer.Services
         {
             var transaction = await _context.Transactions.FirstOrDefaultAsync(t => t.Id == id);
             if (transaction == null)
-                throw new ArgumentException($"Transaction with id {id} not found");
+                throw new NotFoundException($"Transaction with id {id} not found");
 
             var transactionDto = ConvertToDto(transaction);
             return transactionDto;

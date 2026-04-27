@@ -1,4 +1,5 @@
 ﻿using FinanceTrackerServer.Data;
+using FinanceTrackerServer.Models;
 using FinanceTrackerServer.Models.DTO.Pagination.Requests;
 using FinanceTrackerServer.Models.DTO.Stats;
 using FinanceTrackerServer.Models.DTO.Transactions;
@@ -18,7 +19,7 @@ namespace FinanceTrackerServer.Controllers
         private readonly IBalanceService _balanceService;
         private readonly IUserService _userService;
 
-        public TransactionsController(ITransactionService transactionService, IBalanceService balanceService ,IUserService userService)
+        public TransactionsController(ITransactionService transactionService, IBalanceService balanceService, IUserService userService)
         {
             _transactionService = transactionService;
             _balanceService = balanceService;
@@ -31,109 +32,83 @@ namespace FinanceTrackerServer.Controllers
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
             var transactions = await _transactionService.GetTransactionsByUser(userId, filter);
 
-            return Ok(transactions);
+            return Ok(new { transactions = transactions });
         }
 
         [HttpGet("group")]
         public async Task<IActionResult> GetGroupTransactions([FromQuery] TransactionFilterRequest filter)
         {
-            try
-            {
-                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
-                var user = await _userService.GetUserAsync(userId);
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
+            var user = await _userService.GetUserAsync(userId);
 
-                if (!user.GroupId.HasValue)
-                    throw new NullReferenceException("This user is not in the group");
+            if (!user.GroupId.HasValue)
+                throw new NotFoundException("This user is not in the group");
 
-                var transactions = await _transactionService.GetTransactionsByGroup((int)user.GroupId, filter);
+            var transactions = await _transactionService.GetTransactionsByGroup((int)user.GroupId, filter);
 
-                return Ok(transactions);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+            return Ok(new { transactions = transactions });
+
         }
 
         [HttpPost("create")]
         public async Task<IActionResult> Create([FromBody] CreateTransactionDto dto)
         {
-            try
-            {
-                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
 
-                var transaction = await _transactionService.Create(dto, userId);
-                var balance = await _balanceService.CalculateBalanceForPeriod(userId, transaction.Date.Date);
+            var transaction = await _transactionService.Create(dto, userId);
+            var balance = await _balanceService.CalculateBalanceForPeriod(userId, transaction.Date.Date);
 
-                return Ok(balance);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+            return Ok(new { balance = balance });
+
         }
 
         [HttpGet("balance")]
         public async Task<IActionResult> GetBalance()
         {
-            try
-            {
-                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
-                
-                var balance = await _balanceService.CalculateBalanceForPeriod(userId, DateTime.Now.Date);
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
 
-                return Ok(balance);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+            var balance = await _balanceService.CalculateBalanceForPeriod(userId, DateTime.Now.Date);
+
+            return Ok(new { balance = balance });
+
         }
 
         [HttpPut("update")]
         public async Task<IActionResult> Update([FromBody] UpdateTransactionDto dto)
         {
-            try
-            {
-                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
 
-                var transaction = await _transactionService.Update(dto);
-                var balance = await _balanceService.CalculateBalanceForPeriod(userId, transaction.Date);
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
 
-                return Ok(balance);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+            var transaction = await _transactionService.Update(dto);
+            var balance = await _balanceService.CalculateBalanceForPeriod(userId, transaction.Date);
+
+            return Ok(new { balance = balance });
+
         }
 
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id)
         {
-            try
-            {
-                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
-                var transaction = await _transactionService.Get(id);
-                var date = transaction.Date;
-                await _transactionService.Delete(id);
-                var balance = await _balanceService.CalculateBalanceForPeriod(userId, date);
-                return Ok(balance);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
+            var transaction = await _transactionService.Get(id);
+            var date = transaction.Date;
+
+            await _transactionService.Delete(id);
+
+            var balance = await _balanceService.CalculateBalanceForPeriod(userId, date);
+            return Ok(new { balance = balance });
+
         }
 
         [HttpGet("stats/user")]
-        public async Task<IActionResult> GetUserStats([FromQuery][Bind(Prefix ="")]StatsPeriodRequest? period) 
+        public async Task<IActionResult> GetUserStats([FromQuery][Bind(Prefix = "")] StatsPeriodRequest? period)
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
 
             var stats = await _transactionService.GetUserStats(userId, period);
 
-            return Ok(stats);
+            return Ok(new { stats = stats });
         }
 
         [HttpGet("stats/group")]
@@ -142,14 +117,14 @@ namespace FinanceTrackerServer.Controllers
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
             var user = await _userService.GetUserAsync(userId);
 
-            if(user.GroupId == null)
+            if (user.GroupId == null)
             {
                 return BadRequest("This user doesn't have group");
             }
 
             var stats = await _transactionService.GetGroupStats((int)user.GroupId, period);
-           
-            return Ok(stats);
+
+            return Ok(new { stats = stats });
         }
 
         [HttpGet("balance/group")]
@@ -165,12 +140,12 @@ namespace FinanceTrackerServer.Controllers
 
             var users = await _userService.GetUsersByGroupAsync((int)user.GroupId);
             decimal balance = 0;
-            foreach (var u in users) 
+            foreach (var u in users)
             {
                 balance += await _balanceService.CalculateBalanceForPeriod(u.Id, DateTime.Now.Date);
             }
 
-            return Ok(balance);
+            return Ok(new {balance = balance});
         }
     }
 }
