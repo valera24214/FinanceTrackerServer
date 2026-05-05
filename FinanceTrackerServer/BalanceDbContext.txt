@@ -1,0 +1,15 @@
+﻿
+        public DbSet<Balance> Balances { get; set; }
+
+        modelBuilder.Entity<Balance>(entity =>
+            {
+                entity.HasKey(b=>b.Id);
+                entity.HasOne(u => u.User)
+                .WithMany()
+                .HasForeignKey(b => b.UserId)
+                .IsRequired()
+                .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(s => new { s.UserId, s.Date })
+                .IsUnique();
+            });

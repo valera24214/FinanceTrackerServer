@@ -1,4 +1,4 @@
-﻿namespace FinanceTrackerServer.Models.Entities
+﻿namespace Experimantal.Balance
 {
     public class Balance
     {

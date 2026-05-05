@@ -1,9 +1,8 @@
 ﻿using Dapper;
 using FinanceTrackerServer.Models.Entities;
-using FinanceTrackerServer.Services.Interfaces;
 using System.Data;
 
-namespace FinanceTrackerServer.Services
+namespace Experimantal.Balance
 {
     public class BalanceService:IBalanceService
     {

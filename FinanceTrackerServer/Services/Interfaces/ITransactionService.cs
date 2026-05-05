@@ -10,11 +10,12 @@ namespace FinanceTrackerServer.Services.Interfaces
 {
     public interface ITransactionService
     {
-        Task<TransactionDto> Create(CreateTransactionDto dto);
-        Task<TransactionDto> Update(UpdateTransactionDto dto);
-        Task Delete(int id);
+        Task<(TransactionDto, decimal)> Create(CreateTransactionDto dto);
+        Task<(TransactionDto, decimal)> Update(UpdateTransactionDto dto);
+        Task<decimal> Delete(int id);
 
         Task<TransactionDto> Get(int id);
+        Task<decimal> GetUserBalance();
         Task<PaginatedResponse<TransactionDto>> GetTransactionsByUser(TransactionFilterRequest filter);
         Task<PaginatedResponse<TransactionDto>> GetTransactionsByGroup(TransactionFilterRequest filter);
 
