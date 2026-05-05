@@ -1,4 +1,5 @@
 ﻿using FinanceTrackerServer.Data;
+using FinanceTrackerServer.Models;
 using FinanceTrackerServer.Models.DTO;
 using FinanceTrackerServer.Models.Entities;
 using FinanceTrackerServer.Services.Interfaces;
@@ -12,78 +13,73 @@ namespace FinanceTrackerServer.Services
     {
         private IMemoryCache _cache;
         private readonly AppDbContext _context;
+        private int _userId;
 
-        public GroupService(IMemoryCache cache, AppDbContext context)
+        public GroupService(IMemoryCache cache, AppDbContext context, IUserProvider userProvider)
         {
             _cache = cache;
             _context = context;
+            _userId = userProvider.UserId;
         }
 
         public async Task<GroupDto> Create()
         {
+            var user = await _context.Users.FindAsync(_userId);
+
             var group = new Group();
             await _context.Groups.AddAsync(group);
+
+            user.Group = group;
             await _context.SaveChangesAsync();
 
-            return new GroupDto 
+            return new GroupDto
             {
                 Id = group.Id,
             };
         }
 
-        public async Task Delete(int id)
+        public async Task Delete()
         {
-            var group = await _context.Groups.FirstOrDefaultAsync(g => g.Id == id);
-            if (group == null)
-                throw new ArgumentNullException("Invalid group id");
+            var user = await _context.Users.FindAsync(_userId);
+            if (user.GroupId == null)
+                throw new NotFoundException("Group Doesn't Exist");
 
+            var group = await _context.Groups.FindAsync(user.GroupId);
             _context.Groups.Remove(group);
             await _context.SaveChangesAsync();
         }
 
-        public string GenerateInviteCode(int groupId)
+        public async Task<string> GenerateInviteCode()
         {
-            if (_cache.TryGetValue(groupId, out string existingCode))
+            var user = await _context.Users.FindAsync(_userId);
+            if (user.GroupId == null)
+                throw new NotFoundException("User doesn't have group");
+
+            if (_cache.TryGetValue(user.GroupId, out string existingCode))
             {
                 return existingCode;
             }
 
+            var rnd = new Random();
+            var code = rnd.Next(100_000, 1_000_000).ToString();
             var timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmm");
-            var code = $"{groupId}_{timestamp}";
-            var encoded = Convert.ToBase64String(Encoding.UTF8.GetBytes(code));
 
-            _cache.Set(encoded, groupId, TimeSpan.FromMinutes(15));
+            _cache.Set(code, user.GroupId, TimeSpan.FromMinutes(15));
 
-            return encoded;
+            return code;
         }
 
-        public (bool isValid, int groupId) ValidateInviteCode(string code)
+        public async Task<int> ValidateInviteCode(string code)
         {
-            try
-            {
-                var decoded = Encoding.UTF8.GetString(Convert.FromBase64String(code));
-                var parts = decoded.Split('_');
+            if (!_cache.TryGetValue(code, out int groupId))
+                throw new NotFoundException("Invalid code or code has been expired");
 
-                if (parts.Length != 2) 
-                    return (false, 0);
-
-                var groupId = int.Parse(parts[0]);
-                var timestamp = DateTime.ParseExact(parts[1], "yyyyMMddHHmm", null);
-
-                if (DateTime.UtcNow - timestamp > TimeSpan.FromMinutes(60) ||
-                    !_cache.TryGetValue(code, out int cachedGroupId) || !(cachedGroupId == groupId))
-                {
-                    return (false, 0);
-                }
-
-                _cache.Remove(decoded);
-
-                return (true, groupId);
-            }
-            catch
-            {
-                return (false, 0);
-            }
+            var user = await _context.Users.FindAsync(_userId);
+            user.GroupId = groupId;
+            _cache.Remove(code);
+            await _context.SaveChangesAsync();
+            
+            return groupId;
         }
     }
 }

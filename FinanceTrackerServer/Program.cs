@@ -1,4 +1,6 @@
 using FinanceTrackerServer.Data;
+using FinanceTrackerServer.Handlers;
+using FinanceTrackerServer.Models;
 using FinanceTrackerServer.Models.Entities;
 using FinanceTrackerServer.Services;
 using FinanceTrackerServer.Services.Interfaces;
@@ -62,8 +64,12 @@ builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IAuthAccountFactory, AuthAccountsFactory>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IUserProvider, UserProvider>();
 builder.Services.AddTransient<IBalanceService,  BalanceService>();
 builder.Services.AddHostedService <BackgroundBalanceService>();
+
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
 
 builder.Services.AddCors();
 
@@ -99,12 +105,7 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-/*if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}*/
+app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
 {
@@ -114,7 +115,6 @@ if (app.Environment.IsDevelopment())
         options.SwaggerEndpoint("/swagger/v1/swagger.json", "Finance Tracker v1");
     });
 }
-
 
 using (var scope = app.Services.CreateScope())
 {

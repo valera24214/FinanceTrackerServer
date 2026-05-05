@@ -22,7 +22,7 @@ namespace FinanceTrackerServer.Controllers
         public async Task<IActionResult> GetCategories()
         {
             var categories = await _categoryService.GetCategories();
-            return Ok(categories);
+            return Ok(new { categories = categories});
         }
     }
 }
