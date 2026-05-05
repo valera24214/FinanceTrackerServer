@@ -6,8 +6,8 @@ namespace FinanceTrackerServer.Services.Interfaces
     public interface IGroupService
     {
         Task<GroupDto> Create();
-        Task Delete(int groupId); 
-        string GenerateInviteCode(int groupId);
-        (bool isValid, int groupId) ValidateInviteCode(string code);
+        Task Delete(); 
+        Task<string> GenerateInviteCode();
+        Task<int> ValidateInviteCode(string code);
     }
 }

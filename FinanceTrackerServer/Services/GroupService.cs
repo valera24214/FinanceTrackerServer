@@ -13,17 +13,23 @@ namespace FinanceTrackerServer.Services
     {
         private IMemoryCache _cache;
         private readonly AppDbContext _context;
+        private int _userId;
 
-        public GroupService(IMemoryCache cache, AppDbContext context)
+        public GroupService(IMemoryCache cache, AppDbContext context, IUserProvider userProvider)
         {
             _cache = cache;
             _context = context;
+            _userId = userProvider.UserId;
         }
 
         public async Task<GroupDto> Create()
         {
+            var user = await _context.Users.FindAsync(_userId);
+
             var group = new Group();
             await _context.Groups.AddAsync(group);
+
+            user.Group = group;
             await _context.SaveChangesAsync();
 
             return new GroupDto
@@ -32,37 +38,41 @@ namespace FinanceTrackerServer.Services
             };
         }
 
-        public async Task Delete(int id)
+        public async Task Delete()
         {
-            var group = await _context.Groups.FirstOrDefaultAsync(g => g.Id == id);
-            if (group == null)
+            var user = await _context.Users.FindAsync(_userId);
+            if (user.GroupId == null)
                 throw new NotFoundException("Group Doesn't Exist");
 
+            var group = await _context.Groups.FindAsync(user.GroupId);
             _context.Groups.Remove(group);
             await _context.SaveChangesAsync();
         }
 
-        public string GenerateInviteCode(int groupId)
-        {
-            if (!_context.Groups.Any(g => g.Id == groupId))
-                throw new NotFoundException("Group Doesn't Exist");
+        public async Task<string> GenerateInviteCode()
+        {   
+            //TODO: rework code-group storing
+            var user = await _context.Users.FindAsync(_userId);
+            if (user.GroupId == null)
+                throw new NotFoundException("User doesn't have group");
 
-            if (_cache.TryGetValue(groupId, out string existingCode))
+            if (_cache.TryGetValue(user.GroupId, out string existingCode))
             {
                 return existingCode;
             }
 
             var timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmm");
-            var code = $"{groupId}_{timestamp}";
+            var code = $"{user.GroupId}_{timestamp}";
             var encoded = Convert.ToBase64String(Encoding.UTF8.GetBytes(code));
 
-            _cache.Set(encoded, groupId, TimeSpan.FromMinutes(15));
+            _cache.Set(encoded, user.GroupId, TimeSpan.FromMinutes(15));
 
             return encoded;
         }
 
-        public (bool isValid, int groupId) ValidateInviteCode(string code)
+        public async Task<int> ValidateInviteCode(string code)
         {
+            // TODO: rework code-group extraction
             var decoded = Encoding.UTF8.GetString(Convert.FromBase64String(code));
             var parts = decoded.Split('_');
 
@@ -76,12 +86,15 @@ namespace FinanceTrackerServer.Services
                 !_cache.TryGetValue(code, out int cachedGroupId) ||
                 !(cachedGroupId == groupId))
             {
-                throw new ConflictException("Invalid Group Code");
+                throw new ValidationException("Invalid Group Code");
             }
 
+            var user = await _context.Users.FindAsync(_userId);
+            user.GroupId = groupId;
             _cache.Remove(decoded);
-
-            return (true, groupId);
+            await _context.SaveChangesAsync();
+            
+            return groupId;
         }
     }
 }

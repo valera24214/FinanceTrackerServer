@@ -16,13 +16,15 @@ namespace FinanceTrackerServer.Services
     public class TransactionService : ITransactionService
     {
         private readonly AppDbContext _context;
+        private int _userId;
 
-        public TransactionService(AppDbContext context)
+        public TransactionService(AppDbContext context, UserProvider userProvider)
         {
             _context = context;
+            _userId = userProvider.UserId;
         }
 
-        public async Task<TransactionDto> Create(CreateTransactionDto dto, int userId)
+        public async Task<TransactionDto> Create(CreateTransactionDto dto)
         {
             var transaction = new Transaction
             {
@@ -30,7 +32,7 @@ namespace FinanceTrackerServer.Services
                 Description = dto.Description,
                 Date = dto.Date,
                 Type = dto.Type,
-                UserId = userId,
+                UserId = _userId,
                 CategoryId = dto.CategoryId
             };
 
@@ -43,9 +45,12 @@ namespace FinanceTrackerServer.Services
 
         public async Task<TransactionDto> Update(UpdateTransactionDto dto)
         {
-            var transaction = await _context.Transactions.FirstOrDefaultAsync(t => t.Id == dto.Id);
+            var transaction = await _context.Transactions.FindAsync(dto.Id);
             if (transaction == null)
                 throw new NotFoundException($"Transaction with id {dto.Id} not found");
+
+            if (transaction.UserId != _userId)
+                throw new ForbiddenException("This transaction not belongs to user");
 
             transaction.Amount = dto.Amount;
             transaction.Description = dto.Description;
@@ -56,29 +61,35 @@ namespace FinanceTrackerServer.Services
             return transactionDto;
         }
 
-        public async Task Delete(int id)
+        public async Task Delete(int transactionId)
         {
-            var transaction = await _context.Transactions.FirstOrDefaultAsync(t => t.Id == id);
+            var transaction = await _context.Transactions.FindAsync(transactionId);
             if (transaction == null)
-                throw new NotFoundException($"Transaction with id {id} not found");
+                throw new NotFoundException($"Transaction with id {transactionId} not found");
+            
+            if (transaction.UserId != _userId)
+                throw new ForbiddenException("This transaction not belongs to user");
 
             _context.Transactions.Remove(transaction);
             await _context.SaveChangesAsync();
         }
 
-        public async Task<TransactionDto> Get(int id)
+        public async Task<TransactionDto> Get(int transactionId)
         {
-            var transaction = await _context.Transactions.FirstOrDefaultAsync(t => t.Id == id);
+            var transaction = await _context.Transactions.FindAsync(transactionId);
             if (transaction == null)
-                throw new NotFoundException($"Transaction with id {id} not found");
+                throw new NotFoundException($"Transaction with id {transactionId} not found");
+
+            if (transaction.UserId != _userId)
+                throw new ForbiddenException("This transaction not belongs to user");
 
             var transactionDto = ConvertToDto(transaction);
             return transactionDto;
         }
 
-        public async Task<PaginatedResponse<TransactionDto>> GetTransactionsByUser(int userId, TransactionFilterRequest filter)
+        public async Task<PaginatedResponse<TransactionDto>> GetTransactionsByUser(TransactionFilterRequest filter)
         {
-            var query = _context.Transactions.Where(t => t.UserId == userId);
+            var query = _context.Transactions.Where(t => t.UserId == _userId);
             query = ApplyFilters(query, filter);
             var totalCount = await query.CountAsync();
 
@@ -103,8 +114,11 @@ namespace FinanceTrackerServer.Services
             };
         }
 
-        public async Task<PaginatedResponse<TransactionDto>> GetTransactionsByGroup(int groupId, TransactionFilterRequest filter)
+        public async Task<PaginatedResponse<TransactionDto>> GetTransactionsByGroup(TransactionFilterRequest filter)
         {
+            var user = await _context.Users.FindAsync(_userId);
+            var groupId = user.GroupId;
+
             var query = _context.Transactions.Where(t => t.User.GroupId == groupId);
             query = ApplyFilters(query, filter);
             var totalCount = await query.CountAsync();
@@ -130,11 +144,11 @@ namespace FinanceTrackerServer.Services
             };
         }
 
-        public async Task<TransactionStats> GetUserStats(int userId, StatsPeriodRequest? period = null)
+        public async Task<TransactionStats> GetUserStats(StatsPeriodRequest? period = null)
         {
             var (startDate, endDate) = CalculatePeriod(period);
 
-            var query = _context.Transactions.Where(t => t.UserId == userId);
+            var query = _context.Transactions.Where(t => t.UserId == _userId);
             query = ApplyPeriodFilter(query, startDate, endDate);
 
             var totalIncome = await query.Where(t => t.Type == TransactionType.Income).SumAsync(t => t.Amount);
@@ -154,8 +168,10 @@ namespace FinanceTrackerServer.Services
             return stats;
         }
 
-        public async Task<GroupStatsResponse> GetGroupStats(int groupId, StatsPeriodRequest? period = null)
+        public async Task<GroupStatsResponse> GetGroupStats(StatsPeriodRequest? period = null)
         {
+            var curr_user = await _context.Users.FindAsync(_userId);
+            var groupId = curr_user.GroupId;
             var (startDate, endDate) = CalculatePeriod(period);
 
             var usersInGroup = await _context.Users.Where(u => u.GroupId == groupId).ToListAsync();
@@ -183,7 +199,7 @@ namespace FinanceTrackerServer.Services
                var userStats = new UserStats
                 {
                     UserId = user.Id,
-                    Stats = await GetUserStats(user.Id, period)
+                    Stats = await GetUserStats(period)
                 };
 
                 response.UsersStats.Add(userStats);

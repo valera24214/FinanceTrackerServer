@@ -27,6 +27,10 @@
     {
         public UnauthorizedException(string Details) : base(Details, 401, "Unauthorized") { }
     }
+    public class ForbiddenException : BaseException
+    {
+        public ForbiddenException(string Details) : base(Details, 403, "No rights") { }
+    }
 
     public class NotFoundException : BaseException
     {

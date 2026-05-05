@@ -30,7 +30,7 @@ namespace FinanceTrackerServer.Controllers
         public async Task<IActionResult> GetUserTransactions([FromQuery] TransactionFilterRequest filter)
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
-            var transactions = await _transactionService.GetTransactionsByUser(userId, filter);
+            var transactions = await _transactionService.GetTransactionsByUser(filter);
 
             return Ok(new { transactions = transactions });
         }
@@ -44,7 +44,7 @@ namespace FinanceTrackerServer.Controllers
             if (!user.GroupId.HasValue)
                 throw new NotFoundException("This user is not in the group");
 
-            var transactions = await _transactionService.GetTransactionsByGroup((int)user.GroupId, filter);
+            var transactions = await _transactionService.GetTransactionsByGroup(filter);
 
             return Ok(new { transactions = transactions });
 
@@ -55,7 +55,7 @@ namespace FinanceTrackerServer.Controllers
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
 
-            var transaction = await _transactionService.Create(dto, userId);
+            var transaction = await _transactionService.Create(dto);
             var balance = await _balanceService.CalculateBalanceForPeriod(userId, transaction.Date.Date);
 
             return Ok(new { balance = balance });
@@ -106,7 +106,7 @@ namespace FinanceTrackerServer.Controllers
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
 
-            var stats = await _transactionService.GetUserStats(userId, period);
+            var stats = await _transactionService.GetUserStats(period);
 
             return Ok(new { stats = stats });
         }
@@ -122,7 +122,7 @@ namespace FinanceTrackerServer.Controllers
                 return BadRequest("This user doesn't have group");
             }
 
-            var stats = await _transactionService.GetGroupStats((int)user.GroupId, period);
+            var stats = await _transactionService.GetGroupStats(period);
 
             return Ok(new { stats = stats });
         }
