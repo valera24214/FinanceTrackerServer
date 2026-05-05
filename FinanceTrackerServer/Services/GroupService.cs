@@ -50,8 +50,7 @@ namespace FinanceTrackerServer.Services
         }
 
         public async Task<string> GenerateInviteCode()
-        {   
-            //TODO: rework code-group storing
+        {
             var user = await _context.Users.FindAsync(_userId);
             if (user.GroupId == null)
                 throw new NotFoundException("User doesn't have group");
@@ -61,37 +60,23 @@ namespace FinanceTrackerServer.Services
                 return existingCode;
             }
 
+            var rnd = new Random();
+            var code = rnd.Next(100_000, 1_000_000).ToString();
             var timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmm");
-            var code = $"{user.GroupId}_{timestamp}";
-            var encoded = Convert.ToBase64String(Encoding.UTF8.GetBytes(code));
 
-            _cache.Set(encoded, user.GroupId, TimeSpan.FromMinutes(15));
+            _cache.Set(code, user.GroupId, TimeSpan.FromMinutes(15));
 
-            return encoded;
+            return code;
         }
 
         public async Task<int> ValidateInviteCode(string code)
         {
-            // TODO: rework code-group extraction
-            var decoded = Encoding.UTF8.GetString(Convert.FromBase64String(code));
-            var parts = decoded.Split('_');
-
-            if (parts.Length != 2)
-                throw new ArgumentOutOfRangeException(nameof(parts));
-
-            var groupId = int.Parse(parts[0]);
-            var timestamp = DateTime.ParseExact(parts[1], "yyyyMMddHHmm", null);
-
-            if (DateTime.UtcNow - timestamp > TimeSpan.FromMinutes(60) ||
-                !_cache.TryGetValue(code, out int cachedGroupId) ||
-                !(cachedGroupId == groupId))
-            {
-                throw new ValidationException("Invalid Group Code");
-            }
+            if (!_cache.TryGetValue(code, out int groupId))
+                throw new NotFoundException("Invalid code or code has been expired");
 
             var user = await _context.Users.FindAsync(_userId);
             user.GroupId = groupId;
-            _cache.Remove(decoded);
+            _cache.Remove(code);
             await _context.SaveChangesAsync();
             
             return groupId;

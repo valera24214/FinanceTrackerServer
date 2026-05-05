@@ -18,7 +18,7 @@ namespace FinanceTrackerServer.Services
         private readonly AppDbContext _context;
         private int _userId;
 
-        public TransactionService(AppDbContext context, UserProvider userProvider)
+        public TransactionService(AppDbContext context, IUserProvider userProvider)
         {
             _context = context;
             _userId = userProvider.UserId;
