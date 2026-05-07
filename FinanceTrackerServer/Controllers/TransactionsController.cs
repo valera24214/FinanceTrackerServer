@@ -16,13 +16,11 @@ namespace FinanceTrackerServer.Controllers
     public class TransactionsController : ControllerBase
     {
         private readonly ITransactionService _transactionService;
-        private readonly IBalanceService _balanceService;
         private readonly IUserService _userService;
 
-        public TransactionsController(ITransactionService transactionService, IBalanceService balanceService, IUserService userService)
+        public TransactionsController(ITransactionService transactionService, IUserService userService)
         {
             _transactionService = transactionService;
-            _balanceService = balanceService;
             _userService = userService;
         }
 
@@ -55,19 +53,15 @@ namespace FinanceTrackerServer.Controllers
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
 
-            var transaction = await _transactionService.Create(dto);
-            var balance = await _balanceService.CalculateBalanceForPeriod(userId, transaction.Date.Date);
-
-            return Ok(new { balance = balance });
+            var (transaction, balance) = await _transactionService.Create(dto);
+            return Ok(new { transaction = transaction, balance = balance });
 
         }
 
         [HttpGet("balance")]
         public async Task<IActionResult> GetBalance()
         {
-            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
-
-            var balance = await _balanceService.CalculateBalanceForPeriod(userId, DateTime.Now.Date);
+            var balance = _transactionService.GetUserBalance();
 
             return Ok(new { balance = balance });
 
@@ -79,10 +73,9 @@ namespace FinanceTrackerServer.Controllers
 
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
 
-            var transaction = await _transactionService.Update(dto);
-            var balance = await _balanceService.CalculateBalanceForPeriod(userId, transaction.Date);
+            var (transaction, balance) = await _transactionService.Update(dto);
 
-            return Ok(new { balance = balance });
+            return Ok(new { transaction = transaction, balance = balance });
 
         }
 
@@ -94,9 +87,8 @@ namespace FinanceTrackerServer.Controllers
             var transaction = await _transactionService.Get(id);
             var date = transaction.Date;
 
-            await _transactionService.Delete(id);
+            var balance = await _transactionService.Delete(id);
 
-            var balance = await _balanceService.CalculateBalanceForPeriod(userId, date);
             return Ok(new { balance = balance });
 
         }
@@ -142,7 +134,7 @@ namespace FinanceTrackerServer.Controllers
             decimal balance = 0;
             foreach (var u in users)
             {
-                balance += await _balanceService.CalculateBalanceForPeriod(u.Id, DateTime.Now.Date);
+                balance += u.Balance; 
             }
 
             return Ok(new {balance = balance});

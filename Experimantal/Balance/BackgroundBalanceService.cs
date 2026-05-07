@@ -1,6 +1,4 @@
-﻿using FinanceTrackerServer.Services.Interfaces;
-
-namespace FinanceTrackerServer.Services
+﻿namespace Experimantal.Balance
 {
     public class BackgroundBalanceService:BackgroundService
     {

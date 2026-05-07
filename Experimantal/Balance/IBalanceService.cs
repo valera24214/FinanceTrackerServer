@@ -1,4 +1,4 @@
-﻿namespace FinanceTrackerServer.Services.Interfaces
+﻿namespace Experimantal.Balance
 {
     public interface IBalanceService
     {

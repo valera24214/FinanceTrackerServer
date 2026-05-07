@@ -24,7 +24,13 @@ namespace FinanceTrackerServer.Services
             _userId = userProvider.UserId;
         }
 
-        public async Task<TransactionDto> Create(CreateTransactionDto dto)
+        public async Task<decimal> GetUserBalance()
+        {
+            var user = await _context.Users.FindAsync(_userId);
+            return user.Balance;
+        }
+
+        public async Task<(TransactionDto, decimal)> Create(CreateTransactionDto dto)
         {
             var transaction = new Transaction
             {
@@ -37,13 +43,14 @@ namespace FinanceTrackerServer.Services
             };
 
             await _context.Transactions.AddAsync(transaction);
+            var user = await _context.Users.FindAsync(_userId);
+            user.Balance += dto.Type == TransactionType.Income ? dto.Amount : -dto.Amount;
             await _context.SaveChangesAsync();
 
-            var transactionDto = ConvertToDto(transaction);
-            return transactionDto;
+            return (ConvertToDto(transaction), user.Balance);
         }
 
-        public async Task<TransactionDto> Update(UpdateTransactionDto dto)
+        public async Task<(TransactionDto, decimal)> Update(UpdateTransactionDto dto)
         {
             var transaction = await _context.Transactions.FindAsync(dto.Id);
             if (transaction == null)
@@ -52,16 +59,20 @@ namespace FinanceTrackerServer.Services
             if (transaction.UserId != _userId)
                 throw new ForbiddenException("This transaction not belongs to user");
 
+            var change = dto.Amount - transaction.Amount;
+
             transaction.Amount = dto.Amount;
             transaction.Description = dto.Description;
 
+            var user = await _context.Users.FindAsync(_userId);
+            user.Balance += transaction.Type == TransactionType.Income ? change : -change;
+
             await _context.SaveChangesAsync();
 
-            var transactionDto = ConvertToDto(transaction);
-            return transactionDto;
+            return (ConvertToDto(transaction), user.Balance);
         }
 
-        public async Task Delete(int transactionId)
+        public async Task<decimal> Delete(int transactionId)
         {
             var transaction = await _context.Transactions.FindAsync(transactionId);
             if (transaction == null)
@@ -70,8 +81,14 @@ namespace FinanceTrackerServer.Services
             if (transaction.UserId != _userId)
                 throw new ForbiddenException("This transaction not belongs to user");
 
+            var user = await _context.Users.FindAsync(_userId);
+            user.Balance -= transaction.Type == TransactionType.Income ? transaction.Amount : -transaction.Amount;
+
             _context.Transactions.Remove(transaction);
+            
             await _context.SaveChangesAsync();
+
+            return user.Balance;
         }
 
         public async Task<TransactionDto> Get(int transactionId)

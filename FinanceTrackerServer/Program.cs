@@ -65,9 +65,6 @@ builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IAuthAccountFactory, AuthAccountsFactory>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IUserProvider, UserProvider>();
-builder.Services.AddTransient<IBalanceService,  BalanceService>();
-builder.Services.AddHostedService <BackgroundBalanceService>();
-
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 
